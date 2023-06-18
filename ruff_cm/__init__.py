@@ -1,1 +1,1 @@
-from ruff_cm import experimenter, trainer, utils
+from ruff_cm import experimenter, logger, utils

@@ -4,6 +4,9 @@ import time
 
 import numpy as np
 import torch
+import torch.optim as optim
+
+from .logger import Logger, TensorBoardLogger
 
 
 def seed_everything(seed: int) -> None:
@@ -47,3 +50,32 @@ def write_summary(loss, path, name=""):
             file.write(f"{val},")
         file.write(f"{loss},")
         file.write('\n')
+
+
+def get_optimizer(params, model):
+    return eval(f"optim.{params['OPTIMIZER']}")(model.parameters(), **params["OPTIM_PARAMS"])
+
+
+def get_scheduler(params, optimizer):
+    if params["SCHEDULER"] is None:
+        return None
+    elif params["SCHEDULER"] == "WarmUpLR":
+        batch_size = params["BATCH_SIZE"]
+        lr = params["OPTIM_PARAMS"]["lr"]
+        warmup_steps = int(params["SCHED_PARAMS"]["warmup_step"] * params["N_EPOCHS"] * params["N_ITERS"])
+        step_size = params["SCHED_PARAMS"]["step_size"]
+        gamma = params["SCHED_PARAMS"]["gamma"]
+        init_lr = lr / batch_size
+        # start from lr / batch_size, then linearly increase to lr in warmup_steps, then decay by gamma after that
+        lr_lambda = lambda step: init_lr + ((lr - init_lr) / warmup_steps) * step \
+            if step <= warmup_steps else lr * gamma ** ((step - warmup_steps) // step_size)
+        return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+    else:
+        return eval(f"optim.lr_scheduler.{params['SCHEDULER']}")(optimizer, **params["SCHED_PARAMS"])
+
+
+def get_logger(path, debug):
+    if debug:
+        return Logger()
+    else:
+        return TensorBoardLogger(path)
