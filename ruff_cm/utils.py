@@ -28,28 +28,49 @@ def timer(func):
     return wrapper
 
 
-def write_summary(loss, path, name=""):
+def write_summary(path, loss, accuracy=None, suffix=""):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters
-    :param loss: loss of this run
     :param path: experiment folder where the summary will be saved, path = f"./results/{experiment}/{run}"
-    :param name: name of the summary file
+    :param loss: float or a list of float, loss of this run
+    :param accuracy: float or a list of float, accuracy of this run
+    :param suffix: suffix name of the summary file
     """
     split = path.split("/")  # split the path by slashes
     run_name = split[-1]  # sub-folder name, which is the name of the experiment
     ex_path = f"{'/'.join(split[:-1])}"
     params_key_val = run_name.split("_")  # Split the input string by underscores
+    params_val = _get_params_val(params_key_val)
+
+    if not os.path.exists(f"{ex_path}/"):
+        os.makedirs(f"{ex_path}/")
+
+    with open(f"{ex_path}{suffix}.csv", 'a') as file:
+        file.write(f"{run_name},")
+        _write_val(params_val, file)
+        _write_val(loss, file)
+        if accuracy is not None:
+            _write_val(accuracy, file)
+        file.write(f"{loss},")
+        file.write('\n')
+
+
+def _get_params_val(params_key_val):
+    """get the params values from the config file, if the config file is not formatted correctly, return empty list
+    e.g. params_key_val = ["lr-0.001", "batch_size-32", "optimizer-Adam", "scheduler-WarmUpLR"]
+    """
     try:
         params_val = [s.split("-")[1] for s in params_key_val]  # Extract the values after the hyphens
     except IndexError:
         params_val = []  # catch the error if there is nothing after hyphen
-    if not os.path.exists(f"{ex_path}/"):
-        os.makedirs(f"{ex_path}/")
-    with open(f"{ex_path}{name}.csv", 'a') as file:
-        file.write(f"{run_name},")
-        for val in params_val:
-            file.write(f"{val},")
-        file.write(f"{loss},")
-        file.write('\n')
+    return params_val
+
+
+def _write_val(val, file):
+    if isinstance(val, list):  # Check if 'loss' is a list of losses
+        for v in val:
+            file.write(f"{v},")
+    else:
+        file.write(f"{val},")
 
 
 def get_optimizer(params, model):
