@@ -1,1 +1,1 @@
-from ruff_cm import experimenter, logger, utils
+from ruff_cm import experimenter, logger, plotter, utils
