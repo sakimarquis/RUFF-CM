@@ -74,6 +74,10 @@ def _write_val(val, file):
 
 
 def get_optimizer(params, model):
+    freeze_layers = params.get("FREEZE_LAYERS", None)
+    if isinstance(freeze_layers, list) and len(freeze_layers) > 0:
+        trainable_parameters = [name for name, param in model.named_parameters() if param.requires_grad]
+        print(f"Trainable parameters: {trainable_parameters}")
     return eval(f"optim.{params['OPTIMIZER']}")(filter(lambda p: p.requires_grad, model.parameters()), **params["OPTIM_PARAMS"])
 
 
