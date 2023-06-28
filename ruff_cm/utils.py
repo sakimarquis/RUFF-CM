@@ -74,7 +74,7 @@ def _write_val(val, file):
 
 
 def get_optimizer(params, model):
-    return eval(f"optim.{params['OPTIMIZER']}")(model.parameters(), **params["OPTIM_PARAMS"])
+    return eval(f"optim.{params['OPTIMIZER']}")(filter(lambda p: p.requires_grad, model.parameters()), **params["OPTIM_PARAMS"])
 
 
 def get_scheduler(params, optimizer):
