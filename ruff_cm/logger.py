@@ -30,7 +30,8 @@ class ABCLogger(metaclass=ABCMeta):
 
 class Logger(ABCLogger):
     """a wrapper for a python logging console handler"""
-    def __init__(self):
+    def __init__(self, record_interval=RECORD_INTERVAL):
+        self.record_interval = record_interval
         self.logger = logging.getLogger("loss")
         self.logger.setLevel(logging.INFO)
         console_handler = logging.StreamHandler()
@@ -39,14 +40,14 @@ class Logger(ABCLogger):
         self.logger.addHandler(console_handler)
 
     def log_metrics(self, metrics, name, i_iter):
-        if i_iter % RECORD_INTERVAL == 0:
+        if i_iter % self.record_interval == 0:
             self.logger.info(f"Iter {i_iter} - {name:<12s}: {metrics:.4f}")
 
     def log_hparams(self, hparam_dict, metric_dict):
         self.logger.debug(f"Hyper-parameters: {hparam_dict}")
 
     def log_weights(self, model, i_iter):
-        if i_iter % RECORD_INTERVAL == 0:
+        if i_iter % self.record_interval == 0:
             for name, param in model.named_parameters():
                 if "weight" in name:
                     flatten_weights = param.view(-1)
@@ -61,13 +62,14 @@ class Logger(ABCLogger):
 
 class TensorBoardLogger(ABCLogger):
     """A thin wrapper for SummaryWriter"""
-    def __init__(self, path):
+    def __init__(self, path, record_interval=RECORD_INTERVAL):
+        self.record_interval = record_interval
         self.logger = SummaryWriter(path)
         self.record_points = [0, 10, 100, 1000, 5000] + [10000 * i for i in range(1, 6)] + \
                              [100000 * i for i in range(1, 11)]
 
     def log_metrics(self, metrics, name, i_iter):
-        if i_iter % RECORD_INTERVAL == 0:
+        if i_iter % self.record_interval == 0:
             self.logger.add_scalar(name, metrics, i_iter)
 
     def log_hparams(self, hparam_dict, metric_dict):

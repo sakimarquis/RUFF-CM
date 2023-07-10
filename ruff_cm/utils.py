@@ -99,8 +99,8 @@ def get_scheduler(params, optimizer):
         return eval(f"optim.lr_scheduler.{params['SCHEDULER']}")(optimizer, **params["SCHED_PARAMS"])
 
 
-def get_logger(path, debug):
+def get_logger(path, debug, record_interval=100):
     if debug:
-        return Logger()
+        return Logger(record_interval)
     else:
-        return TensorBoardLogger(path)
+        return TensorBoardLogger(path, record_interval)
