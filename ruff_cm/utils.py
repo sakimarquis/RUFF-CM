@@ -99,7 +99,7 @@ def get_scheduler(params, optimizer):
         return eval(f"optim.lr_scheduler.{params['SCHEDULER']}")(optimizer, **params["SCHED_PARAMS"])
 
 
-def get_logger(path=None, debug=False, name="Loss", record_interval=100):
+def get_logger(path=None, debug=False, name="Iter", record_interval=100):
     if debug:
         return Logger(name, record_interval)
     else:
