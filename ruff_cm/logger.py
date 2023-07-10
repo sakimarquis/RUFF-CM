@@ -30,9 +30,9 @@ class ABCLogger(metaclass=ABCMeta):
 
 class Logger(ABCLogger):
     """a wrapper for a python logging console handler"""
-    def __init__(self, record_interval=RECORD_INTERVAL):
+    def __init__(self, logger_name="loss", record_interval=RECORD_INTERVAL):
         self.record_interval = record_interval
-        self.logger = logging.getLogger("loss")
+        self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging.INFO)
         console_handler = logging.StreamHandler()
         console_handler_format = '%(message)s'
