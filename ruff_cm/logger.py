@@ -30,8 +30,9 @@ class ABCLogger(metaclass=ABCMeta):
 
 class Logger(ABCLogger):
     """a wrapper for a python logging console handler"""
-    def __init__(self, logger_name="loss", record_interval=RECORD_INTERVAL):
+    def __init__(self, logger_name="Iter", record_interval=RECORD_INTERVAL):
         self.record_interval = record_interval
+        self.name = logger_name
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging.INFO)
         console_handler = logging.StreamHandler()
@@ -41,7 +42,7 @@ class Logger(ABCLogger):
 
     def log_metrics(self, metrics, name, i_iter):
         if i_iter % self.record_interval == 0:
-            self.logger.info(f"Iter {i_iter} - {name:<12s}: {metrics:.4f}")
+            self.logger.info(f"{self.name} {i_iter} - {name:<12s}: {metrics:.4f}")
 
     def log_hparams(self, hparam_dict, metric_dict):
         self.logger.debug(f"Hyper-parameters: {hparam_dict}")
@@ -51,7 +52,7 @@ class Logger(ABCLogger):
             for name, param in model.named_parameters():
                 if "weight" in name:
                     flatten_weights = param.view(-1)
-                    self.logger.debug(f"Iter {i_iter} - {name}: {flatten_weights}")
+                    self.logger.debug(f"{self.name} {i_iter} - {name}: {flatten_weights}")
 
     def finish(self):
         """remove all handlers and close the logger"""
