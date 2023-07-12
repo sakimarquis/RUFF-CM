@@ -50,7 +50,7 @@ def write_summary(path, loss, accuracy=None, suffix=""):
         _write_val(loss, file)
         if accuracy is not None:
             _write_val(accuracy, file)
-        file.write(f"{loss},")
+        # file.write(f"{loss},")
         file.write('\n')
 
 
