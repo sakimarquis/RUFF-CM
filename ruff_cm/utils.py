@@ -87,7 +87,7 @@ def get_scheduler(params, optimizer):
     elif params["SCHEDULER"] == "WarmUpLR":
         batch_size = params["BATCH_SIZE"]
         lr = params["OPTIM_PARAMS"]["lr"]
-        warmup_steps = int(params["SCHED_PARAMS"]["warmup_step"] * params["N_EPOCHS"] * params["N_ITERS"])
+        warmup_steps = int(params["SCHED_PARAMS"]["warmup_step"] * params["N_EPOCHS"] * params.get("N_ITERS", 1))
         step_size = params["SCHED_PARAMS"]["step_size"]
         gamma = params["SCHED_PARAMS"]["gamma"]
         init_lr = lr / batch_size
