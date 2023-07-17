@@ -104,3 +104,9 @@ def get_logger(path=None, debug=False, name="Iter", record_interval=100):
         return Logger(name, record_interval)
     else:
         return TensorBoardLogger(path, record_interval)
+
+
+def dump_yaml(dict_to_dump, path, name):
+    with open(f'{path}/{name}.yml', 'w', encoding="utf-8") as file:
+        yaml.dump(dict_to_dump, file, Dumper=yaml.Dumper, default_flow_style=False, sort_keys=False)
+
