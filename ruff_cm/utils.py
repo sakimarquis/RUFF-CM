@@ -1,6 +1,7 @@
 import os
 import random
 import time
+import hashlib
 
 import numpy as np
 import torch
@@ -110,3 +111,10 @@ def dump_yaml(dict_to_dump, path, name):
     with open(f'{path}/{name}.yml', 'w', encoding="utf-8") as file:
         yaml.dump(dict_to_dump, file, Dumper=yaml.Dumper, default_flow_style=False, sort_keys=False)
 
+
+def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
+    """hash the subject id and return a unique id for the subject"""
+    unique_string = input_string + uid  # append a unique identifier
+    hash_object = hashlib.new(algorithm)
+    hash_object.update(unique_string.encode('utf-8'))
+    return hash_object.hexdigest()[:truncate]

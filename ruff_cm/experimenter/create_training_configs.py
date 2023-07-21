@@ -11,6 +11,8 @@ import os
 from ruamel import yaml
 from copy import deepcopy
 
+from ..utils import hash_string
+
 
 def load_config(path):
     with open(path, "r", encoding='utf-8') as file:
@@ -153,6 +155,8 @@ def autoname(configs, config_diffs, name_keys=None):
                 if str_key == 'OPTIMPARAMS':  # deal with special case
                     name = name + 'lr' + '-' + str(config['OPTIM_PARAMS']['lr']) + '_'
                     name = name + 'WD' + '-' + str(config['OPTIM_PARAMS']['weight_decay']) + '_'
+                elif str_key == 'PATH':  # deal with special case
+                    name = name + hash_string(config['PATH'], uid="", truncate=8) + '_'
                 else:
                     name = name + str_key + '-' + str_val + '_'
         configs_name.append(name[:-1])  # get rid of the last '_'
