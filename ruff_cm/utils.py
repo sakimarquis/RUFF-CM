@@ -3,6 +3,7 @@ import random
 import time
 import hashlib
 import yaml
+import psutil
 
 import numpy as np
 import torch
@@ -119,3 +120,11 @@ def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
     hash_object = hashlib.new(algorithm)
     hash_object.update(unique_string.encode('utf-8'))
     return hash_object.hexdigest()[:truncate]
+
+
+def get_ram_usage(idx):
+    print(psutil.virtual_memory().percent, psutil.swap_memory().percent, "idx", idx)
+    is_cuda = torch.cuda.is_available()
+    if is_cuda:
+        vram_percent = torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated()
+        print(f"GPU memory usage: {vram_percent * 100:.3f}%")
