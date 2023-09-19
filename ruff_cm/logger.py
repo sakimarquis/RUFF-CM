@@ -28,6 +28,24 @@ class ABCLogger(metaclass=ABCMeta):
         pass
 
 
+class DummyLogger(ABCLogger):
+    """a dummy logger that does nothing"""
+    def __init__(self, *args):
+        pass
+
+    def log_metrics(self, metrics, name, i_iter):
+        pass
+
+    def log_hparams(self, hparam_dict, metric_dict):
+        pass
+
+    def log_weights(self, model, i_iter):
+        pass
+
+    def finish(self):
+        pass
+
+
 class Logger(ABCLogger):
     """a wrapper for a python logging console handler"""
     def __init__(self, logger_name="Iter", record_interval=RECORD_INTERVAL):
