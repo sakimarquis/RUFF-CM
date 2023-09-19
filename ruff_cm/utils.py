@@ -2,6 +2,7 @@ import os
 import random
 import time
 import hashlib
+import yaml
 
 import numpy as np
 import torch
