@@ -123,7 +123,8 @@ def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
 
 
 def print_ram_usage(idx, use_cuda=False):
-    ram_percent = psutil.virtual_memory().percent
+    ram = psutil.virtual_memory()
+    ram_percent = (ram.total - ram.available) / ram.total * 100
     swap_percent = psutil.swap_memory().percent
     print(f"RAM usage: {ram_percent:.2f}%, swap usage: {swap_percent:.2f}%, idx: {idx}")
     if torch.cuda.is_available() and use_cuda:
