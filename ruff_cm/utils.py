@@ -3,13 +3,15 @@ import random
 import time
 import hashlib
 import yaml
-import psutil
+import csv
+from typing import List, Dict
 
 import numpy as np
 import torch
 import torch.optim as optim
+import psutil
 
-from .logger import Logger, TensorBoardLogger
+from .logger import Logger, TensorBoardLogger, DummyLogger
 
 
 def seed_everything(seed: int) -> None:
@@ -31,49 +33,48 @@ def timer(func):
     return wrapper
 
 
-def write_summary(path, loss, accuracy=None, suffix=""):
+def write_summary(path: str, metrics: Dict[str, List], suffix: str = ""):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters
     :param path: experiment folder where the summary will be saved, path = f"./results/{experiment}/{run}"
-    :param loss: float or a list of float, loss of this run
-    :param accuracy: float or a list of float, accuracy of this run
+    :param metrics: keys are metric names, values are lists of metric values
     :param suffix: suffix name of the summary file
     """
     split = path.split("/")  # split the path by slashes
     run_name = split[-1]  # sub-folder name, which is the name of the experiment
     ex_path = f"{'/'.join(split[:-1])}"
     params_key_val = run_name.split("_")  # Split the input string by underscores
-    params_val = _get_params_val(params_key_val)
+    params_key, params_val = _get_params(params_key_val)
 
     if not os.path.exists(f"{ex_path}/"):
         os.makedirs(f"{ex_path}/")
 
-    with open(f"{ex_path}{suffix}.csv", 'a') as file:
-        file.write(f"{run_name},")
-        _write_val(params_val, file)
-        _write_val(loss, file)
-        if accuracy is not None:
-            _write_val(accuracy, file)
-        # file.write(f"{loss},")
-        file.write('\n')
+    summary_file = f"{ex_path}{suffix}.csv"
+    file_exists = os.path.isfile(summary_file)
+
+    with open(summary_file, 'a') as file:
+        writer = csv.writer(file)
+        if not file_exists:  # Write the header only if the file does not exist
+            header = ['ex_name'] + params_key + [f"{key}_fold{i}" for key, values in metrics.items()
+                                                 for i in range(len(values))]
+            writer.writerow(header)
+
+        row = [run_name] + params_val
+        for values in metrics.values():
+            row.extend(values)
+        writer.writerow(row)
 
 
-def _get_params_val(params_key_val):
+def _get_params(params_key_val):
     """get the params values from the config file, if the config file is not formatted correctly, return empty list
     e.g. params_key_val = ["lr-0.001", "batch_size-32", "optimizer-Adam", "scheduler-WarmUpLR"]
     """
     try:
+        params_key = [s.split("-")[0] for s in params_key_val]  # Extract the keys before the hyphens
         params_val = [s.split("-")[1] for s in params_key_val]  # Extract the values after the hyphens
     except IndexError:
+        params_key = []  # catch the error if there is nothing before hyphen
         params_val = []  # catch the error if there is nothing after hyphen
-    return params_val
-
-
-def _write_val(val, file):
-    if isinstance(val, list):  # Check if 'loss' is a list of losses
-        for v in val:
-            file.write(f"{v},")
-    else:
-        file.write(f"{val},")
+    return params_key, params_val
 
 
 def get_optimizer(params, model):
@@ -81,7 +82,8 @@ def get_optimizer(params, model):
     if isinstance(freeze_layers, list) and len(freeze_layers) > 0:
         trainable_parameters = [name for name, param in model.named_parameters() if param.requires_grad]
         print(f"Trainable parameters: {trainable_parameters}")
-    return eval(f"optim.{params['OPTIMIZER']}")(filter(lambda p: p.requires_grad, model.parameters()), **params["OPTIM_PARAMS"])
+    return eval(f"optim.{params['OPTIMIZER']}")(filter(lambda p: p.requires_grad, model.parameters()),
+                                                **params["OPTIM_PARAMS"])
 
 
 def get_scheduler(params, optimizer):
@@ -105,6 +107,8 @@ def get_scheduler(params, optimizer):
 def get_logger(path=None, debug=False, name="Epoch", record_interval=100):
     if debug:
         return Logger(name, record_interval)
+    elif debug is None:
+        return DummyLogger()
     else:
         return TensorBoardLogger(path, record_interval)
 
