@@ -33,7 +33,7 @@ def timer(func):
     return wrapper
 
 
-def write_summary(path: str, metrics: Dict[str, List], suffix: str = ""):
+def write_summary(path: str, metrics: Dict[str, List], suffix: str = "summary"):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters
     :param path: experiment folder where the summary will be saved, path = f"./results/{experiment}/{run}"
     :param metrics: keys are metric names, values are lists of metric values
@@ -55,16 +55,16 @@ def write_summary(path: str, metrics: Dict[str, List], suffix: str = ""):
         writer = csv.writer(file)
         if not file_exists:  # Write the header only if the file does not exist
             header = ['ex_name'] + params_key
-            for key, values in metrics.items():
-                if len(values) > 1:
-                    header.extend(f"{key}_fold{i}" for i in range(len(values)))
+            for key, value in metrics.items():
+                if len(value) > 1:
+                    header.extend(f"{key}_fold{i}" for i in range(len(value)))
                 else:
                     header.append(key)
             writer.writerow(header)
 
         row = [run_name] + params_val
-        for values in metrics.values():
-            row.extend(values)
+        for value in metrics.values():
+            row.extend(value)
         writer.writerow(row)
 
 
