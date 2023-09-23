@@ -9,7 +9,7 @@ from typing import List, Dict
 import numpy as np
 import torch
 import torch.optim as optim
-import psutil
+# import psutil
 
 from .logger import Logger, TensorBoardLogger, DummyLogger
 
@@ -130,11 +130,11 @@ def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
     return hash_object.hexdigest()[:truncate]
 
 
-def print_ram_usage(idx, use_cuda=False):
-    ram = psutil.virtual_memory()
-    ram_percent = (ram.total - ram.available) / ram.total * 100
-    swap_percent = psutil.swap_memory().percent
-    print(f"RAM usage: {ram_percent:.2f}%, swap usage: {swap_percent:.2f}%, idx: {idx}")
-    if torch.cuda.is_available() and use_cuda:
-        vram_percent = torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated()
-        print(f"GPU memory usage: {vram_percent * 100:.2f}%")
+# def print_ram_usage(idx, use_cuda=False):
+#     ram = psutil.virtual_memory()
+#     ram_percent = (ram.total - ram.available) / ram.total * 100
+#     swap_percent = psutil.swap_memory().percent
+#     print(f"RAM usage: {ram_percent:.2f}%, swap usage: {swap_percent:.2f}%, idx: {idx}")
+#     if torch.cuda.is_available() and use_cuda:
+#         vram_percent = torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated()
+#         print(f"GPU memory usage: {vram_percent * 100:.2f}%")
