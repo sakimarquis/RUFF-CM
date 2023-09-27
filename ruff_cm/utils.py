@@ -1,4 +1,5 @@
 import os
+import re
 import random
 import time
 import hashlib
@@ -108,13 +109,27 @@ def get_scheduler(params, optimizer):
         return eval(f"optim.lr_scheduler.{params['SCHEDULER']}")(optimizer, **params["SCHED_PARAMS"])
 
 
-def get_logger(path=None, debug=False, name="Epoch", record_interval=100):
+def get_logger(path=None, debug=False, name="Epoch", record_interval=100, log_to_cache=False):
     if debug:
         return Logger(name, record_interval)
     elif debug is None:
         return DummyLogger()
     else:
+        if log_to_cache:
+            path = get_cache_dir(path)
         return TensorBoardLogger(path, record_interval)
+
+
+def get_cache_dir(path):
+    """store the log files in the cache directory"""
+    pattern = r"/results/(.*)"  # search for the directory after '/results/'
+    match = re.search(pattern, path)
+
+    if match:
+        directory = match.group(1)
+        path = "/xdisk/bob/hdx/logdir/" + directory
+
+    return path
 
 
 def dump_yaml(dict_to_dump, path, name):
