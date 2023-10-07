@@ -1,3 +1,4 @@
+import os
 import logging
 from abc import ABCMeta, abstractmethod
 from torch.utils.tensorboard import SummaryWriter
@@ -5,6 +6,8 @@ import wandb
 # import neptune.new as neptune
 
 RECORD_INTERVAL = 100
+WEIGHTS_INTERVAL = ([0, 10, 100, 1000, 5000] + [10000 * i for i in range(1, 6)] +
+                    [100000 * i for i in range(1, 11)])
 
 
 class ABCLogger(metaclass=ABCMeta):
@@ -85,8 +88,7 @@ class TensorBoardLogger(ABCLogger):
     def __init__(self, path, record_interval=RECORD_INTERVAL):
         self.record_interval = record_interval
         self.logger = SummaryWriter(path)
-        self.record_points = [0, 10, 100, 1000, 5000] + [10000 * i for i in range(1, 6)] + \
-                             [100000 * i for i in range(1, 11)]
+        self.weights_record_points = WEIGHTS_INTERVAL
 
     def log_metrics(self, metrics, name, i_iter):
         if i_iter % self.record_interval == 0:
@@ -97,10 +99,10 @@ class TensorBoardLogger(ABCLogger):
 
     def log_weights(self, model, i_iter):
         """split step to be the index of my arbitrary record points"""
-        if self.logger is not None and i_iter in self.record_points:
+        if self.logger is not None and i_iter in self.weights_record_points:
             for name, param in model.named_parameters():
                 if "weight" in name:
-                    i = self.record_points.index(i_iter)
+                    i = self.weights_record_points.index(i_iter)
                     self.logger.add_histogram(name, param, i)
 
     def finish(self):
@@ -109,7 +111,10 @@ class TensorBoardLogger(ABCLogger):
 
 
 class WandBLogger(ABCLogger):
-    def __init__(self, project_name, expt_name, config, logger_info=None):
+    def __init__(self, project_name, expt_name, record_interval, config, logger_info=None):
+        wandb.login(key=os.environ["WANDB_KEY"])
+        self.record_interval = record_interval
+        self.weights_record_points = WEIGHTS_INTERVAL
         if logger_info is not None:
             # Reload existing logger
             run_id = logger_info['id']
@@ -120,17 +125,18 @@ class WandBLogger(ABCLogger):
             self.is_new = True
 
     def log_metrics(self, metrics, name, i_iter):
-        self.logger.log({name: metrics}, step=i_iter)
+        if i_iter % self.record_interval == 0:
+            self.logger.log({name: metrics}, step=i_iter)
 
     def log_hparams(self, hparam_dict, metric_dict):
         self.logger.config.update(hparam_dict, allow_val_change=True)
         self.logger.log(metric_dict)
 
     def log_weights(self, model, i_iter):
-        if self.logger is not None and i_iter in self.record_points:
+        if self.logger is not None and i_iter in self.weights_record_points:
             for name, param in model.named_parameters():
                 if "weight" in name:
-                    i = self.record_points.index(i_iter)
+                    i = self.weights_record_points.index(i_iter)
                     self.logger.log({name: wandb.Histogram(param)}, step=i)
 
     def finish(self):

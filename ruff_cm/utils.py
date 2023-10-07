@@ -109,8 +109,8 @@ def get_scheduler(params, optimizer):
         return eval(f"optim.lr_scheduler.{params['SCHEDULER']}")(optimizer, **params["SCHED_PARAMS"])
 
 
-def get_logger(logger="debug", path=None, name="Epoch", record_interval=100, log_to_cache=False, params=None):
-    if logger == "debug":
+def get_logger(logger="debug", path=None, name="Epoch", record_interval=100, log_to_cache=False, project_name=None):
+    if logger is None or logger == "debug":
         return Logger(name, record_interval)
     elif logger == "dummy":
         return DummyLogger()
@@ -119,23 +119,27 @@ def get_logger(logger="debug", path=None, name="Epoch", record_interval=100, log
             path = get_cache_dir(path)
         return TensorBoardLogger(path, record_interval)
     elif logger == "wandb":
-        split = path.split("/")
-        expt_name = split[-1]
-        project_name = params.get("PROJECT", "default")
-        return WandBLogger(path, record_interval, project_name, expt_name, params)
+        expt_name = get_expt_name(path)
+        return WandBLogger(path, record_interval, project_name, expt_name)
     else:
         raise ValueError(f"Logger {logger} not supported")
 
 
-def get_cache_dir(path):
-    """store the log files in the cache directory"""
+def get_expt_name(path):
     pattern = r"/results/(.*)"  # search for the directory after '/results/'
     match = re.search(pattern, path)
 
     if match:
         directory = match.group(1)
-        path = "/xdisk/bob/hdx/logdir/" + directory
+        return directory
+    else:
+        raise ValueError(f"cannot find experiment name from path {path}")
 
+
+def get_cache_dir(path):
+    """store the log files in the cache directory"""
+    directory = get_expt_name(path)
+    path = "/xdisk/bob/hdx/logdir/" + directory
     return path
 
 
