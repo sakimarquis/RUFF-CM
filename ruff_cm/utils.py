@@ -109,7 +109,7 @@ def get_scheduler(params, optimizer):
         return eval(f"optim.lr_scheduler.{params['SCHEDULER']}")(optimizer, **params["SCHED_PARAMS"])
 
 
-def get_logger(logger="debug", path=None, name="Epoch", record_interval=100, log_to_cache=False, project_name=None):
+def get_logger(path=None, logger="debug", name="Epoch", record_interval=100, log_to_cache=False, project_name=None):
     if logger is None or logger == "debug":
         return Logger(name, record_interval)
     elif logger == "dummy":
