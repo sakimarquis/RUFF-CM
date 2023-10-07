@@ -15,6 +15,7 @@ setup(
         "torch",
         "pyyaml",
         "ruamel.yaml",
+        "wandb",
     ],
 )
 

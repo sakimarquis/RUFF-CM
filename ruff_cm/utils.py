@@ -12,7 +12,7 @@ import torch
 import torch.optim as optim
 # import psutil
 
-from .logger import Logger, TensorBoardLogger, DummyLogger
+from .logger import Logger, TensorBoardLogger, DummyLogger, WandBLogger
 
 
 def seed_everything(seed: int) -> None:
@@ -109,15 +109,22 @@ def get_scheduler(params, optimizer):
         return eval(f"optim.lr_scheduler.{params['SCHEDULER']}")(optimizer, **params["SCHED_PARAMS"])
 
 
-def get_logger(path=None, debug=False, name="Epoch", record_interval=100, log_to_cache=False):
-    if debug:
+def get_logger(logger="debug", path=None, name="Epoch", record_interval=100, log_to_cache=False, params=None):
+    if logger == "debug":
         return Logger(name, record_interval)
-    elif debug is None:
+    elif logger == "dummy":
         return DummyLogger()
-    else:
+    elif logger == "tensorboard":
         if log_to_cache:
             path = get_cache_dir(path)
         return TensorBoardLogger(path, record_interval)
+    elif logger == "wandb":
+        split = path.split("/")
+        expt_name = split[-1]
+        project_name = params.get("PROJECT", "default")
+        return WandBLogger(path, record_interval, project_name, expt_name, params)
+    else:
+        raise ValueError(f"Logger {logger} not supported")
 
 
 def get_cache_dir(path):

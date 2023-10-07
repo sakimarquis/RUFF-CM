@@ -1,6 +1,7 @@
 import logging
 from abc import ABCMeta, abstractmethod
 from torch.utils.tensorboard import SummaryWriter
+import wandb
 # import neptune.new as neptune
 
 RECORD_INTERVAL = 100
@@ -106,6 +107,34 @@ class TensorBoardLogger(ABCLogger):
         self.logger.flush()
         self.logger.close()
 
+
+class WandBLogger(ABCLogger):
+    def __init__(self, project_name, expt_name, config, logger_info=None):
+        if logger_info is not None:
+            # Reload existing logger
+            run_id = logger_info['id']
+            self.logger = wandb.init(project=project_name, resume="allow", id=run_id)
+            self.is_new = False
+        else:
+            self.logger = wandb.init(project=project_name, name=expt_name, config=config)
+            self.is_new = True
+
+    def log_metrics(self, metrics, name, i_iter):
+        self.logger.log({name: metrics}, step=i_iter)
+
+    def log_hparams(self, hparam_dict, metric_dict):
+        self.logger.config.update(hparam_dict, allow_val_change=True)
+        self.logger.log(metric_dict)
+
+    def log_weights(self, model, i_iter):
+        if self.logger is not None and i_iter in self.record_points:
+            for name, param in model.named_parameters():
+                if "weight" in name:
+                    i = self.record_points.index(i_iter)
+                    self.logger.log({name: wandb.Histogram(param)}, step=i)
+
+    def finish(self):
+        self.logger.finish()
 
 # class NeptuneLogger(ABCLogger):
 #     # A thin wrapper for Neptune's logger
