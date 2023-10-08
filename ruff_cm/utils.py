@@ -145,6 +145,12 @@ def get_cache_dir(path):
     return path
 
 
+def get_save_dir(path):
+    directory = get_expt_name(path)
+    path = "/groups/bob/hdx/" + directory
+    return path
+
+
 def dump_yaml(dict_to_dump, path, name):
     with open(f'{path}/{name}.yml', 'w', encoding="utf-8") as file:
         yaml.dump(dict_to_dump, file, Dumper=yaml.Dumper, default_flow_style=False, sort_keys=False)
