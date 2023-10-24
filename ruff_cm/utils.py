@@ -3,9 +3,9 @@ import re
 import random
 import time
 import hashlib
-import yaml
 import csv
 from typing import List, Dict
+from ruamel.yaml import YAML
 
 import numpy as np
 import torch
@@ -152,8 +152,10 @@ def get_save_dir(path):
 
 
 def dump_yaml(dict_to_dump, path, name):
+    yaml = YAML()
+    yaml.default_flow_style = False
     with open(f'{path}/{name}.yml', 'w', encoding="utf-8") as file:
-        yaml.dump(dict_to_dump, file, Dumper=yaml.Dumper, default_flow_style=False, sort_keys=False)
+        yaml.dump(dict_to_dump, file)
 
 
 def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
