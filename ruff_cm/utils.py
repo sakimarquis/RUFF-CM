@@ -54,7 +54,8 @@ def write_summary(path: str, metrics: Dict[str, List], suffix: str = "_summary")
 
     with open(summary_file, 'a+', newline='') as file:
         writer = csv.writer(file)
-        if not file_exists:  # Write the header only if the file does not exist
+        # Write the header only if the file does not exist
+        if not file_exists:
             header = ['ex_name'] + params_key
             for key, value in metrics.items():
                 if len(value) > 1:
@@ -62,7 +63,7 @@ def write_summary(path: str, metrics: Dict[str, List], suffix: str = "_summary")
                 else:
                     header.append(key)
             writer.writerow(header)
-
+        # write the hyperparameters and metrics
         row = [run_name] + params_val
         for value in metrics.values():
             row.extend(value)
