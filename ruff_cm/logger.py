@@ -140,8 +140,7 @@ class WandBLogger(ABCLogger):
 
     def log_hparams(self, hparam_dict, metric_dict):
         """we already log hparams in the beginning of each run, so we don't need to log it again"""
-        fold_metric_dict = {f"{self.fold_info}/{key}": val for key, val in metric_dict.items()}
-        wandb.log(fold_metric_dict)
+        wandb.summary.update(metric_dict)
 
     def log_weights(self, model, i_iter):
         if i_iter in self.weights_record_points:
