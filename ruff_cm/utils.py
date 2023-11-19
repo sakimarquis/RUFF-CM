@@ -118,7 +118,7 @@ def get_logger(path=None, logger="debug", name="Epoch", record_interval=100, con
     elif logger == "tensorboard":
         log_cache_dir = config.get("LOG_CACHE_DIR")
         if log_cache_dir is not None:
-            expt_cache_dir = get_cache_dir(path, log_cache_dir)
+            path = get_cache_dir(path, log_cache_dir)
         return TensorBoardLogger(path, record_interval)
     elif logger == "wandb":
         return WandBLogger(config, name, record_interval)
