@@ -120,7 +120,7 @@ def get_logger(path=None, logger="debug", name="Epoch", record_interval=100, con
             path = get_cache_dir(path)
         return TensorBoardLogger(path, record_interval)
     elif logger == "wandb":
-        return WandBLogger(config, record_interval)
+        return WandBLogger(config, name, record_interval)
     else:
         raise ValueError(f"Logger {logger} not supported")
 

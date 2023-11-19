@@ -114,22 +114,26 @@ class WandBLogger(ABCLogger):
     """The logic of WandBLogger is very different from the other loggers, since we use cross validation.
     So, each run contains all folds (inner or outer).
     If different folds are different runs, it would be hard to aggregate the results, and a cluttered dashboard.
+
+    We have to define custom metrics, and log them at the end of each fold.
+    https://docs.wandb.ai/guides/track/log/customize-logging-axes
     """
-    def __init__(self, config, record_interval):
+    def __init__(self, config, name, record_interval):
         self.record_interval = record_interval
         self.weights_record_points = WEIGHTS_INTERVAL
+        wandb.define_metric(f"{name}")
 
         self.fold_info = ""
         fold = config.get("FOLD", None)
         outer_fold = config.get("OUTER_FOLD", None)
         if outer_fold is not None:
-            self.fold_info += f"outer_fold{outer_fold}"
+            self.fold_info += f"OuterFold{outer_fold}_"
         if fold is not None:
-            self.fold_info += f"fold{fold}"
+            self.fold_info += f"Fold{fold}"
 
     def log_metrics(self, metrics, name, i_iter):
         if i_iter % self.record_interval == 0:
-            wandb.log({f"{self.fold_info}_{name}": metrics}, step=i_iter)
+            wandb.log({f"{self.fold_info}_{name}": metrics})
 
     def log_hparams(self, hparam_dict, metric_dict):
         """we already log hparams in the beginning of each run, so we don't need to log it again"""
