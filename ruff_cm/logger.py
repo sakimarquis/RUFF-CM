@@ -145,11 +145,12 @@ class WandBLogger(ABCLogger):
         """
         if i_iter % self.record_interval == 0:
             wandb.log({f"{name}/{self.fold_info}": metrics,
-                       f"epoch/{self.fold_info}": i_iter})
+                       f"{self.logger_name}/{self.fold_info}": i_iter})
 
     def log_hparams(self, hparam_dict, metric_dict):
         """we already log hparams in the beginning of each run, so we don't need to log it again"""
-        wandb.summary.update(metric_dict)
+        fold_metric_dict = {f"{key}/{self.fold_info}": value for key, value in metric_dict.items()}
+        wandb.summary.update(fold_metric_dict)
 
     def log_weights(self, model, i_iter):
         if i_iter in self.weights_record_points:
@@ -157,7 +158,7 @@ class WandBLogger(ABCLogger):
                 if "weight" in name:
                     i = self.weights_record_points.index(i_iter)
                     wandb.log({f"{name}/{self.fold_info}": wandb.Histogram(param.detach().cpu().numpy().flatten()),
-                               f"epoch/{self.fold_info}": i})
+                               f"{self.logger_name}/{self.fold_info}": i})
 
     def finish(self):
         """we don't need to do anything"""
