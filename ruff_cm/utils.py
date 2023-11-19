@@ -12,7 +12,7 @@ import torch
 import torch.optim as optim
 # import psutil
 
-from .logger import Logger, TensorBoardLogger, DummyLogger#, WandBLogger
+from .logger import Logger, TensorBoardLogger, DummyLogger, WandBLogger
 
 
 def seed_everything(seed: int) -> None:
@@ -116,9 +116,9 @@ def get_logger(path=None, logger="debug", name="Epoch", record_interval=100, con
     elif logger == "dummy":
         return DummyLogger()
     elif logger == "tensorboard":
-        log_to_cache = config.get("LOG_TO_CACHE", False)
-        if log_to_cache:
-            path = get_cache_dir(path)
+        log_cache_dir = config.get("LOG_CACHE_DIR")
+        if log_cache_dir is not None:
+            expt_cache_dir = get_cache_dir(path, log_cache_dir)
         return TensorBoardLogger(path, record_interval)
     elif logger == "wandb":
         return WandBLogger(config, name, record_interval)
@@ -137,11 +137,11 @@ def get_expt_name(path):
         raise ValueError(f"cannot find experiment name from path {path}")
 
 
-def get_cache_dir(path):
+def get_cache_dir(path, cache_dir="/xdisk/bob/hdx/logdir/"):
     """store the log files in the cache directory"""
-    directory = get_expt_name(path)
-    path = "/xdisk/bob/hdx/logdir/" + directory
-    return path
+    expt_dir = get_expt_name(path)
+    expt_cache_dir = "/xdisk/bob/hdx/logdir/" + expt_dir
+    return expt_cache_dir
 
 
 def get_save_dir(path):
