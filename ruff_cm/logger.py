@@ -113,7 +113,6 @@ class TensorBoardLogger(ABCLogger):
 class WandBLogger(ABCLogger):
     """The logic of WandBLogger is very different from the other loggers, since we use cross validation.
     So, each run contains all folds (inner or outer).
-
     If different folds are different runs, it would be hard to aggregate the results, and a cluttered dashboard.
     """
     def __init__(self, config, record_interval):
@@ -130,11 +129,11 @@ class WandBLogger(ABCLogger):
 
     def log_metrics(self, metrics, name, i_iter):
         if i_iter % self.record_interval == 0:
-            self.logger.log({name: metrics}, step=i_iter)
+            wandb.log({f"{self.fold_info}_{name}": metrics}, step=i_iter)
 
     def log_hparams(self, hparam_dict, metric_dict):
-        self.logger.config.update(hparam_dict, allow_val_change=True)
-        self.logger.log(metric_dict)
+        """we already log hparams in the beginning of each run, so we don't need to log it again"""
+        wandb.log(metric_dict)
 
     def log_weights(self, model, i_iter):
         if self.logger is not None and i_iter in self.weights_record_points:
@@ -144,7 +143,8 @@ class WandBLogger(ABCLogger):
                     self.logger.log({name: wandb.Histogram(param)}, step=i)
 
     def finish(self):
-        self.logger.finish()
+        """we don't need to do anything"""
+        pass
 
 # class NeptuneLogger(ABCLogger):
 #     # A thin wrapper for Neptune's logger
