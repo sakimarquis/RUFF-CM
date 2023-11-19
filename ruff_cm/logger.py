@@ -121,7 +121,7 @@ class WandBLogger(ABCLogger):
     def __init__(self, config, name, record_interval):
         self.record_interval = record_interval
         self.weights_record_points = WEIGHTS_INTERVAL
-        wandb.define_metric(f"{name}")
+        self.name = name
 
         self.fold_info = ""
         fold = config.get("FOLD", None)
@@ -131,13 +131,17 @@ class WandBLogger(ABCLogger):
         if fold is not None:
             self.fold_info += f"Fold{fold}"
 
+        # wandb.define_metric(f"{name}")
+        wandb.define_metric("*", step_metric=f"{name}")
+
     def log_metrics(self, metrics, name, i_iter):
         if i_iter % self.record_interval == 0:
-            wandb.log({f"{self.fold_info}_{name}": metrics})
+            wandb.log({f"{self.fold_info}/{name}": metrics, f"{self.name}": i_iter})
 
     def log_hparams(self, hparam_dict, metric_dict):
         """we already log hparams in the beginning of each run, so we don't need to log it again"""
-        wandb.log(metric_dict)
+        fold_metric_dict = {f"{self.fold_info}/{key}": val for key, val in metric_dict.items()}
+        wandb.log(fold_metric_dict)
 
     def log_weights(self, model, i_iter):
         if i_iter in self.weights_record_points:
