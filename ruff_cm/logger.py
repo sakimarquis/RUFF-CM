@@ -111,18 +111,22 @@ class TensorBoardLogger(ABCLogger):
 
 
 class WandBLogger(ABCLogger):
-    def __init__(self, project_name, expt_name, record_interval, config, logger_info=None):
-        wandb.login(key=os.environ["WANDB_KEY"])
+    """The logic of WandBLogger is very different from the other loggers, since we use cross validation.
+    So, each run contains all folds (inner or outer).
+
+    If different folds are different runs, it would be hard to aggregate the results, and a cluttered dashboard.
+    """
+    def __init__(self, config, record_interval):
         self.record_interval = record_interval
         self.weights_record_points = WEIGHTS_INTERVAL
-        if logger_info is not None:
-            # Reload existing logger
-            run_id = logger_info['id']
-            self.logger = wandb.init(project=project_name, resume="allow", id=run_id)
-            self.is_new = False
-        else:
-            self.logger = wandb.init(project=project_name, name=expt_name, config=config)
-            self.is_new = True
+
+        self.fold_info = ""
+        fold = config.get("FOLD", None)
+        outer_fold = config.get("OUTER_FOLD", None)
+        if outer_fold is not None:
+            self.fold_info += f"outer_fold{outer_fold}"
+        if fold is not None:
+            self.fold_info += f"fold{fold}"
 
     def log_metrics(self, metrics, name, i_iter):
         if i_iter % self.record_interval == 0:

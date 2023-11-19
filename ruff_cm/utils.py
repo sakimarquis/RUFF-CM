@@ -12,7 +12,7 @@ import torch
 import torch.optim as optim
 # import psutil
 
-from .logger import Logger, TensorBoardLogger, DummyLogger  #  WandBLogger
+from .logger import Logger, TensorBoardLogger, DummyLogger, WandBLogger
 
 
 def seed_everything(seed: int) -> None:
@@ -119,10 +119,8 @@ def get_logger(path=None, logger="debug", name="Epoch", record_interval=100, con
         if log_to_cache:
             path = get_cache_dir(path)
         return TensorBoardLogger(path, record_interval)
-    # elif logger == "wandb":
-    #     expt_name = get_expt_name(path)
-    #     project_name = config.get("PROJECT", "default")
-    #     return WandBLogger(project_name, expt_name, record_interval, config)
+    elif logger == "wandb":
+        return WandBLogger(config, record_interval)
     else:
         raise ValueError(f"Logger {logger} not supported")
 
