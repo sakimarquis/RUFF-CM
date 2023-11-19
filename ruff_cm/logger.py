@@ -131,12 +131,9 @@ class WandBLogger(ABCLogger):
         if fold is not None:
             self.fold_info += f"Fold{fold}"
 
-        # wandb.define_metric(f"{name}")
-        wandb.define_metric("*", step_metric=f"{name}")
-
     def log_metrics(self, metrics, name, i_iter):
         if i_iter % self.record_interval == 0:
-            wandb.log({f"{self.fold_info}/{name}": metrics, f"{self.name}": i_iter})
+            wandb.log({f"{self.fold_info}/{name}": metrics)
 
     def log_hparams(self, hparam_dict, metric_dict):
         """we already log hparams in the beginning of each run, so we don't need to log it again"""
