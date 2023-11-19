@@ -12,7 +12,7 @@ import torch
 import torch.optim as optim
 # import psutil
 
-from .logger import Logger, TensorBoardLogger, DummyLogger, WandBLogger
+from .logger import Logger, TensorBoardLogger, DummyLogger#, WandBLogger
 
 
 def seed_everything(seed: int) -> None:
