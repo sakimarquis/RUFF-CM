@@ -131,11 +131,12 @@ class WandBLogger(ABCLogger):
         if fold is not None:
             self.fold_info += f"fold{fold}"
 
-        wandb.define_metric(f"Loss/{self.fold_info}*", step_metric=f"{self.logger_name}/{self.fold_info}")
-        wandb.define_metric(f"Accuracy/{self.fold_info}*", step_metric=f"{self.logger_name}/{self.fold_info}")
-        wandb.define_metric(f"ValLoss/{self.fold_info}*", step_metric=f"{self.logger_name}/{self.fold_info}")
-        wandb.define_metric(f"ValAccuracy/{self.fold_info}*", step_metric=f"{self.logger_name}/{self.fold_info}")
-        wandb.define_metric(f"GradNorm/{self.fold_info}*", step_metric=f"{self.logger_name}/{self.fold_info}")
+        wandb.define_metric(f"Loss/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
+        wandb.define_metric(f"Accuracy/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
+        wandb.define_metric(f"ValLoss/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
+        wandb.define_metric(f"ValAccuracy/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
+        wandb.define_metric(f"GradNorm/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
+        wandb.define_metric(f"i_action_loss/{self.fold_info}*", step_metric=f"Iter/{self.fold_info}")
 
     def log_metrics(self, metrics, name, i_iter):
         """
