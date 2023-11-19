@@ -136,11 +136,11 @@ class WandBLogger(ABCLogger):
         wandb.log(metric_dict)
 
     def log_weights(self, model, i_iter):
-        if self.logger is not None and i_iter in self.weights_record_points:
+        if i_iter in self.weights_record_points:
             for name, param in model.named_parameters():
                 if "weight" in name:
                     i = self.weights_record_points.index(i_iter)
-                    self.logger.log({name: wandb.Histogram(param)}, step=i)
+                    wandb.log({name: wandb.Histogram(param.detach().cpu().numpy().flatten())}, step=i)
 
     def finish(self):
         """we don't need to do anything"""
