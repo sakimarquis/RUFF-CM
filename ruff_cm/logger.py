@@ -122,14 +122,8 @@ class WandBLogger(ABCLogger):
         self.record_interval = record_interval
         self.weights_record_points = WEIGHTS_INTERVAL
         self.logger_name = name
+        self.fold_info = self._get_fold_info(config)
 
-        self.fold_info = ""
-        fold = config.get("FOLD", None)
-        outer_fold = config.get("OUTER_FOLD", None)
-        if outer_fold is not None:
-            self.fold_info += f"outer_fold{outer_fold}/"
-        if fold is not None:
-            self.fold_info += f"fold{fold}"
 
         wandb.define_metric(f"Loss/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
         wandb.define_metric(f"Accuracy/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
@@ -137,6 +131,19 @@ class WandBLogger(ABCLogger):
         wandb.define_metric(f"ValAccuracy/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
         wandb.define_metric(f"GradNorm/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
         wandb.define_metric(f"i_action_loss/{self.fold_info}*", step_metric=f"Iter/{self.fold_info}")
+
+    def _get_fold_info(self, config):
+        self.fold_info = ""
+        fold = config.get("FOLD")
+        outer_fold = config.get("OUTER_FOLD")
+        sub = config.get("SUB")
+        trainer = config.get("TRAINER")
+        if sub is not None and "sub" in trainer.lower():
+            self.fold_info += f"sub{sub}/"
+        if outer_fold is not None:
+            self.fold_info += f"outer_fold{outer_fold}/"
+        if fold is not None:
+            self.fold_info += f"fold{fold}"
 
     def log_metrics(self, metrics, name, i_iter):
         """
