@@ -174,13 +174,15 @@ class WandBLogger(ABCLogger):
         pass
 
 
-def wandb_run_trainer(trainer, config, experiment, filename):
+def wandb_run_trainer(trainer, config, experiment, filename, silent=True):
+    """https://github.com/wandb/wandb/issues/4223#issuecomment-1236304565"""
     wandb.login(key=os.environ["WANDB_KEY"])
     log_dir = config.get("LOG_CACHE_DIR", os.getcwd())
     with wandb.init(project=experiment, name=filename.replace('.yml', ''), group=filename.replace('.yml', ''),
                     config=config, dir=log_dir, settings=wandb.Settings(
-                _disable_stats=True, _disable_meta=True, disable_code=True, disable_git=True, silent=True,
-                log_internal=str(Path(__file__).parent / 'wandb' / 'null'))):
+                _disable_stats=True, _disable_meta=True, disable_code=True, disable_git=True, silent=silent,
+                # log_internal=str(Path(__file__).parent / 'wandb' / 'null')),
+                log_internal=str(os.getcwd() / 'wandb' / 'null')):
         trainer.run()
 
 # class NeptuneLogger(ABCLogger):
