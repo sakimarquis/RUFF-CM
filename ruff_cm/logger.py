@@ -182,7 +182,7 @@ def wandb_run_trainer(trainer, config, experiment, filename, silent=True):
                     config=config, dir=log_dir, settings=wandb.Settings(
                 _disable_stats=True, _disable_meta=True, disable_code=True, disable_git=True, silent=silent,
                 # log_internal=str(Path(__file__).parent / 'wandb' / 'null')),
-                log_internal=str(os.getcwd() / 'wandb' / 'null'))):
+                log_internal=str(Path(os.getcwd()) / 'wandb' / 'null'))):
         trainer.run()
 
 # class NeptuneLogger(ABCLogger):
