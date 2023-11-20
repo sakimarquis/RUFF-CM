@@ -172,6 +172,16 @@ class WandBLogger(ABCLogger):
         """we don't need to do anything"""
         pass
 
+
+def wandb_run_trainer(trainer, config, experiment, filename):
+    wandb.login(key=os.environ["WANDB_KEY"])
+    with wandb.init(project=experiment, name=filename.replace('.yml', ''), group=filename.replace('.yml', ''),
+                    config=config, dir=config["LOG_CACHE_DIR"],
+                    settings=wandb.Settings(_disable_stats=True, _disable_meta=True,
+                                            disable_code=True, disable_git=True, silent=True,
+                                            log_internal=str(Path(__file__).parent / 'wandb' / 'null'))):
+        trainer.run()
+
 # class NeptuneLogger(ABCLogger):
 #     # A thin wrapper for Neptune's logger
 #     def __init__(self, logger_info, neptune_project, expt_name,
