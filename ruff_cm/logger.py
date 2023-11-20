@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 from abc import ABCMeta, abstractmethod
 from torch.utils.tensorboard import SummaryWriter
 import wandb
@@ -175,11 +176,11 @@ class WandBLogger(ABCLogger):
 
 def wandb_run_trainer(trainer, config, experiment, filename):
     wandb.login(key=os.environ["WANDB_KEY"])
+    log_dir = config.get("LOG_CACHE_DIR", os.getcwd())
     with wandb.init(project=experiment, name=filename.replace('.yml', ''), group=filename.replace('.yml', ''),
-                    config=config, dir=config["LOG_CACHE_DIR"],
-                    settings=wandb.Settings(_disable_stats=True, _disable_meta=True,
-                                            disable_code=True, disable_git=True, silent=True,
-                                            log_internal=str(Path(__file__).parent / 'wandb' / 'null'))):
+                    config=config, dir=log_dir, settings=wandb.Settings(
+                _disable_stats=True, _disable_meta=True, disable_code=True, disable_git=True, silent=True,
+                log_internal=str(Path(__file__).parent / 'wandb' / 'null'))):
         trainer.run()
 
 # class NeptuneLogger(ABCLogger):
