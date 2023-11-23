@@ -186,7 +186,9 @@ def wandb_run_trainer(trainer, config, experiment, filename, silent=True):
                 _disable_stats=True, _disable_meta=True, disable_code=True, disable_git=True, silent=silent,
                 # log_internal=str(Path(__file__).parent / 'wandb' / 'null')),
                 log_internal=str(Path(os.getcwd()) / 'wandb' / 'null'))):
-        trainer.run()
+        metrics = trainer.run()
+        wandb.summary.update(metrics)
+    return metrics.get("test_nll_mean", metrics.get("val_nll_mean", -1))
 
 # class NeptuneLogger(ABCLogger):
 #     # A thin wrapper for Neptune's logger
