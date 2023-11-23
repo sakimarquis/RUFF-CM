@@ -45,11 +45,19 @@ def write_summary(path: str, metrics: Dict[str, List], suffix: str = "_summary")
     ex_path = f"{'/'.join(split[:-1])}"
     params_key_val = run_name.split("_")  # Split the input string by underscores
     params_key, params_val = _get_params(params_key_val)
+    save_run_summary(ex_path, params_key, params_val, metrics, suffix, save="local")
+    save_run_summary(ex_path, params_key, params_val, metrics, suffix, save="global")
 
+
+def save_run_summary(ex_path, params_key, params_val, metrics, suffix, save="local"):
+    """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters"""
     if not os.path.exists(f"{ex_path}/"):
         os.makedirs(f"{ex_path}/")
 
-    summary_file = f"{ex_path}{suffix}.csv"
+    if save == "local":
+        summary_file = f"{ex_path}{suffix}/run_perf.csv"
+    else:
+        summary_file = f"{ex_path}{suffix}.csv"
     file_exists = os.path.isfile(summary_file)
 
     with open(summary_file, 'a+', newline='') as file:
