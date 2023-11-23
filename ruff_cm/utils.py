@@ -51,10 +51,13 @@ def write_summary(path: str, metrics: Dict[str, List], suffix: str = "_summary")
 
 def save_run_summary(ex_path, run_name, params_key, params_val, metrics, suffix, save="local"):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters"""
-    if save == "local":
-        if not os.path.exists(f"{ex_path}{suffix}"):
-            os.makedirs(f"{ex_path}{suffix}")
-        summary_file = f"{ex_path}{suffix}/run_perf.csv"
+    if save == "local":  # save the run in the run folder
+        if len(run_name) == 0:
+            run_name = "run"  # only when no run name is specified when testing
+        local_path = f"{ex_path}{suffix}/{run_name}/"
+        if not os.path.exists(local_path):
+            os.makedirs(local_path)
+        summary_file = f"{local_path}/run_perf.csv"
     else:
         summary_file = f"{ex_path}{suffix}.csv"
     file_exists = os.path.isfile(summary_file)
