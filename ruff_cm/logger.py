@@ -133,18 +133,21 @@ class WandBLogger(ABCLogger):
         wandb.define_metric(f"GradNorm/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
         wandb.define_metric(f"i_action_loss/{self.fold_info}*", step_metric=f"Iter/{self.fold_info}")
 
-    def _get_fold_info(self, config):
-        self.fold_info = ""
+    @staticmethod
+    def _get_fold_info(config):
         fold = config.get("FOLD")
         outer_fold = config.get("OUTER_FOLD")
         sub = config.get("SUB")
         trainer = config.get("TRAINER")
+
+        fold_info = ""
         if sub is not None and "sub" in trainer.lower():
-            self.fold_info += f"sub{sub}/"
+            fold_info += f"sub{sub}/"
         if outer_fold is not None:
-            self.fold_info += f"outer_fold{outer_fold}/"
+            fold_info += f"outer_fold{outer_fold}/"
         if fold is not None:
-            self.fold_info += f"fold{fold}"
+            fold_info += f"fold{fold}"
+        return fold_info
 
     def log_metrics(self, metrics, name, i_iter):
         """
