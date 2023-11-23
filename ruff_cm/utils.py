@@ -46,7 +46,7 @@ def write_summary(path: str, metrics: Dict[str, List], suffix: str = "_summary")
     params_key_val = run_name.split("_")  # Split the input string by underscores
     params_key, params_val = _get_params(params_key_val)
     save_run_summary(ex_path, params_key, params_val, metrics, suffix, save="local")
-    save_run_summary(ex_path, params_key, params_val, metrics, suffix, save="global")
+    save_run_summary(ex_path, params_key, params_val, metrics, "", save="global")
 
 
 def save_run_summary(ex_path, params_key, params_val, metrics, suffix, save="local"):
