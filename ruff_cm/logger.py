@@ -125,7 +125,6 @@ class WandBLogger(ABCLogger):
         self.logger_name = name
         self.fold_info = self._get_fold_info(config)
 
-
         wandb.define_metric(f"Loss/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
         wandb.define_metric(f"Accuracy/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
         wandb.define_metric(f"ValLoss/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
