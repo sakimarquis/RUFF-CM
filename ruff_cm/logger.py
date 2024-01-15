@@ -176,15 +176,15 @@ class WandBLogger(ABCLogger):
         pass
 
 
-def wandb_run_trainer(trainer, config, project_name, config_file, silent=True, log_path=None):
+def wandb_run_trainer(trainer, config, project_name, config_file, silent=True, default_log_dir=False):
     """https://github.com/wandb/wandb/issues/4223#issuecomment-1236304565"""
     trainer.logger_type = 'wandb'
-    if log_path is None:
+    if default_log_dir:
+        log_dir = None
+        log_internal = None
+    else:
         log_dir = config.get("LOG_CACHE_DIR", os.getcwd())
         log_internal = str(Path(os.getcwd()) / 'wandb' / 'null')
-    else:
-        log_dir = log_path
-        log_internal = log_path
 
     wandb.login(key=os.environ["WANDB_KEY"])
     with wandb.init(project=project_name, name=config_file.replace('.yml', ''), group=config_file.replace('.yml', ''),
