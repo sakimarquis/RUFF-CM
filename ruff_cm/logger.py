@@ -176,15 +176,22 @@ class WandBLogger(ABCLogger):
         pass
 
 
-def wandb_run_trainer(trainer, config, experiment, filename, silent=True):
+def wandb_run_trainer(trainer, config, project_name, config_file, silent=True, log_path=None):
     """https://github.com/wandb/wandb/issues/4223#issuecomment-1236304565"""
+    trainer.logger_type = 'wandb'
+    if log_path is None:
+        log_dir = config.get("LOG_CACHE_DIR", os.getcwd())
+        log_internal = str(Path(os.getcwd()) / 'wandb' / 'null')
+    else:
+        log_dir = log_path
+        log_internal = log_path
+
     wandb.login(key=os.environ["WANDB_KEY"])
-    log_dir = config.get("LOG_CACHE_DIR", os.getcwd())
-    with wandb.init(project=experiment, name=filename.replace('.yml', ''), group=filename.replace('.yml', ''),
+    with wandb.init(project=project_name, name=config_file.replace('.yml', ''), group=config_file.replace('.yml', ''),
                     config=config, dir=log_dir, settings=wandb.Settings(
                 _disable_stats=True, _disable_meta=True, disable_code=True, disable_git=True, silent=silent,
                 # log_internal=str(Path(__file__).parent / 'wandb' / 'null')),
-                log_internal=str(Path(os.getcwd()) / 'wandb' / 'null'))):
+                log_internal=log_internal)):
         metrics = trainer.run()
         wandb.summary.update(metrics)
     return metrics.get("test_nll_mean", metrics.get("val_nll_mean", -1))
