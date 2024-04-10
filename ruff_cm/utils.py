@@ -175,6 +175,11 @@ def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
     return hash_object.hexdigest()[:truncate]
 
 
+def calculate_bic(sample_size, mse, num_params):
+    bic = -2 * np.log(mse) + num_params * np.log(sample_size)
+    return bic
+
+
 # def print_ram_usage(idx, use_cuda=False):
 #     ram = psutil.virtual_memory()
 #     ram_percent = (ram.total - ram.available) / ram.total * 100
