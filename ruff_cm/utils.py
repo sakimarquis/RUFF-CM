@@ -4,7 +4,7 @@ import random
 import time
 import hashlib
 import csv
-from typing import List, Dict
+from typing import List, Dict, Callable
 from ruamel.yaml import YAML
 
 import numpy as np
@@ -23,7 +23,7 @@ def seed_everything(seed: int) -> None:
     torch.cuda.manual_seed(seed)
 
 
-def timer(func):
+def timer(func: Callable):
     def wrapper(*args, **kw):
         t1 = time.time()
         func(*args, **kw)
@@ -175,8 +175,8 @@ def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
     return hash_object.hexdigest()[:truncate]
 
 
-def calculate_bic(sample_size, mse, num_params):
-    bic = -2 * np.log(mse) + num_params * np.log(sample_size)
+def calculate_bic(likelihood: float, num_params: int, sample_size: int) -> float:
+    bic = -2 * np.log(likelihood) + num_params * np.log(sample_size)
     return bic
 
 
