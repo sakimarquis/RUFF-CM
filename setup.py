@@ -12,10 +12,8 @@ setup(
     license='LICENSE.txt',
     install_requires=[
         "numpy",
-        "torch",
         "pyyaml",
         "ruamel.yaml",
-        "wandb",
     ],
 )
 
