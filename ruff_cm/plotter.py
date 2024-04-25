@@ -9,10 +9,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
-PLOT_PARAMS = {"dpi": 300,
-               "bbox_inches": 'tight',
-               "pad_inches": 0.1,
-               "transparent": False}
+PLOT_PARAMS = {
+    "dpi": 300,
+    "bbox_inches": 'tight',
+    "pad_inches": 0.1,
+}
 
 mpl.rcParams['axes.spines.right'] = False
 mpl.rcParams['axes.spines.top'] = False
