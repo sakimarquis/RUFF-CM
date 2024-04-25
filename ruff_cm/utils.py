@@ -160,11 +160,18 @@ def get_save_dir(path, save_dir="/groups/bob/hdx/"):
     return path
 
 
-def dump_yaml(dict_to_dump, path, name):
+def dump_yaml(dict_to_dump: Dict, path: str, file_name: str):
     yaml = YAML()
     yaml.default_flow_style = False
-    with open(f'{path}/{name}.yml', 'w', encoding="utf-8") as file:
+    with open(f'{path}/{file_name}.yml', 'w', encoding="utf-8") as file:
         yaml.dump(dict_to_dump, file)
+
+
+def load_yaml(file: str) -> Dict:
+    yaml = YAML()
+    with open(file, 'r', encoding='utf-8') as file:
+        yaml_dict = yaml.load(file)
+    return yaml_dict
 
 
 def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
