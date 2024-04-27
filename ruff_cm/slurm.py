@@ -1,7 +1,7 @@
 import submitit
 import itertools
 from typing import List, Dict, Any, Callable
-from utils import load_yaml
+from .utils import load_yaml
 
 SAVE_DIR = "groups/bob/hdx"
 
@@ -84,3 +84,4 @@ def batch_run(func: Callable, ex_configs: List[Dict], slurm_config: Dict[str, An
         jobs = executor.map_array(func, ex_configs[i:i + batch_size])
         for job in jobs:
             print(job.job_id)
+
