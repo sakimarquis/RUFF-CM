@@ -1,10 +1,11 @@
 import os
 import re
+import itertools
 import random
 import time
 import hashlib
 import csv
-from typing import List, Dict, Callable
+from typing import List, Dict, Any, Callable
 from ruamel.yaml import YAML
 
 import numpy as np
@@ -188,6 +189,30 @@ def calculate_bic(likelihood: float, num_params: int, sample_size: int) -> float
     bic = -2 * np.log(likelihood) + num_params * np.log(sample_size)
     return bic
 
+
+def factorize_configs(config_ranges: Dict[str, List[Any]]) -> List[Dict]:
+    """factorize a dict of configs list into a list of configs dict
+
+    Example:
+        input: config_dict = {"size": [10, 20, 30], "lr": [0.1, 0.2]}
+        output: config_list = [{"size": 10, "lr": 0.1}, {"size": 10, "lr": 0.2}, ...]
+    """
+    keys, values = zip(*config_ranges.items())
+    return [dict(zip(keys, values)) for values in itertools.product(*values)]
+
+
+def create_filename(config: Dict) -> str:
+    """Create a name for an experiment run based on its training config"""
+    cfg = config.copy()
+    if "OPTIM_PARAMS" in cfg.keys():
+        optim_params = cfg.pop("OPTIM_PARAMS")
+        cfg["LR"] = optim_params["lr"]
+        cfg["WD"] = optim_params["weight_decay"]
+    keys, values = zip(*cfg.items())
+    keys = [k.replace("_", "") for k in keys]
+    name = [f"{key}-{value}" for key, value in zip(keys, values)]
+    name = "_".join(name)
+    return name
 
 # def print_ram_usage(idx, use_cuda=False):
 #     ram = psutil.virtual_memory()
