@@ -163,13 +163,15 @@ def get_save_dir(path, save_dir="/groups/bob/hdx/"):
 def dump_yaml(dict_to_dump: Dict, path: str, file_name: str):
     yaml = YAML()
     yaml.default_flow_style = False
+    yaml.preserve_quotes = True
     with open(f'{path}/{file_name}.yml', 'w', encoding="utf-8") as file:
         yaml.dump(dict_to_dump, file)
 
 
-def load_yaml(file: str) -> Dict:
+def load_yaml(file_path: str) -> Dict:
     yaml = YAML()
-    with open(file, 'r', encoding='utf-8') as file:
+    yaml.preserve_quotes = True
+    with open(file_path, 'r', encoding='utf-8') as file:
         yaml_dict = yaml.load(file)
     return yaml_dict
 
