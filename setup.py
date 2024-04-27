@@ -14,7 +14,6 @@ setup(
         "numpy",
         "pyyaml",
         "ruamel.yaml",
+        "submitit",
     ],
 )
-
-
