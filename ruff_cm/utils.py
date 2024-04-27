@@ -188,6 +188,23 @@ def calculate_bic(likelihood: float, num_params: int, sample_size: int) -> float
     bic = -2 * np.log(likelihood) + num_params * np.log(sample_size)
     return bic
 
+
+def save_checkpoint(model, optimizer,epoch, loss,  path):
+    """https://pytorch.org/tutorials/beginner/saving_loading_models.html"""
+    torch.save({'epoch': epoch,  'loss': loss,
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict()}, path)
+
+
+def load_checkpoint(model, optimizer, path):
+    """https://pytorch.org/tutorials/beginner/saving_loading_models.html"""
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint['model'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    epoch = checkpoint['epoch']
+    loss = checkpoint['loss']
+    return model, optimizer, epoch, loss
+
 # def print_ram_usage(idx, use_cuda=False):
 #     ram = psutil.virtual_memory()
 #     ram_percent = (ram.total - ram.available) / ram.total * 100
