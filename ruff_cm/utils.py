@@ -40,6 +40,8 @@ def write_summary(path: str, metrics: Dict[str, List]):
     :param metrics: keys are metric names, values are lists of metric values
     :param suffix: suffix name of the summary file
     """
+    for v in metrics.values():
+        assert isinstance(v, list), "Metrics values should be a list"
     components = os.path.normpath(path).split(os.sep)
     idx = components.index("results")
     ex_path = f"{'/'.join(components[:idx+2])}"
