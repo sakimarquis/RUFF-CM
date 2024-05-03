@@ -46,18 +46,17 @@ def write_summary(path: str, metrics: Dict[str, List]):
     idx = components.index("results")
     ex_path = f"{'/'.join(components[:idx+2])}"
     run_name = components[idx+2] if len(components[idx:]) > 2 else "run"  # sub-folder name is the name of the run
-    params_key_val = run_name.split("_")  # Split the input string by underscores
-    params_key, params_val = _get_params(params_key_val)
+    params_key, params_val = get_hyperparams_from_name(run_name)
 
     local_path = f"{ex_path}/{run_name}"
     if not os.path.exists(local_path):
         os.makedirs(local_path)
 
-    write_save_summary(params_key, params_val, metrics, f"{local_path}/perf.csv")
-    write_save_summary(params_key, params_val, metrics, f"{ex_path}_perf.csv")
+    _write_summary_csv(run_name, params_key, params_val, metrics, f"{local_path}/perf.csv")
+    _write_summary_csv(run_name, params_key, params_val, metrics, f"{ex_path}_perf.csv")
 
 
-def write_save_summary(params_key, params_val, metrics, summary_file):
+def _write_summary_csv(run_name, params_key, params_val, metrics, summary_file):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters"""
     with open(summary_file, 'a+', newline='') as file:
         writer = csv.writer(file)
@@ -79,10 +78,14 @@ def write_save_summary(params_key, params_val, metrics, summary_file):
         writer.writerow(row)
 
 
-def _get_params(params_key_val):
+def get_hyperparams_from_name(run_name):
     """get the params values from the config file, if the config file is not formatted correctly, return empty list
-    e.g. params_key_val = ["lr-0.001", "batch_size-32", "optimizer-Adam", "scheduler-WarmUpLR"]
+    
+    example:
+        run_name = "lr-0.001_batch_size-32_optimizer-Adam_scheduler-WarmUpLR"
+        params_key = ["lr", "batch_size", "optimizer", "scheduler"]; params_val = ["0.001", "32", "Adam", "WarmUpLR"]
     """
+    params_key_val = run_name.split("_")  # Split the input string by underscores
     try:
         params_key = [s.split("-")[0] for s in params_key_val]  # Extract the keys before the hyphens
         params_val = [s.split("-")[1] for s in params_key_val]  # Extract the values after the hyphens
