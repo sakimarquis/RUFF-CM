@@ -58,11 +58,13 @@ def write_summary(path: str, metrics: Dict[str, List]):
 
 def _write_summary_csv(run_name, params_key, params_val, metrics, summary_file):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters"""
+    file_exist = os.path.isfile(summary_file)  # codes below will create the summary_file
+
     with open(summary_file, 'a+', newline='') as file:
         writer = csv.writer(file)
 
         # Write the header only if the file does not exist
-        if not os.path.isfile(summary_file):
+        if not file_exist:
             header = ['ex_name'] + params_key
             for key, value in metrics.items():
                 if len(value) > 1:
