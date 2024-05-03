@@ -41,7 +41,7 @@ def write_summary(path: str, metrics: Dict[str, List]):
     :param suffix: suffix name of the summary file
     """
     for v in metrics.values():
-        assert isinstance(v, list), "Metrics values should be a list"
+        assert isinstance(v, (list, tuple, np.ndarray)), "values in metrics should be list, tuple or np.ndarray"
     components = os.path.normpath(path).split(os.sep)
     idx = components.index("results")
     ex_path = f"{'/'.join(components[:idx+2])}"
@@ -49,7 +49,7 @@ def write_summary(path: str, metrics: Dict[str, List]):
     params_key_val = run_name.split("_")  # Split the input string by underscores
     params_key, params_val = _get_params(params_key_val)
 
-    local_path = f"{ex_path}/{run_name}/"
+    local_path = f"{ex_path}/{run_name}"
     if not os.path.exists(local_path):
         os.makedirs(local_path)
 
