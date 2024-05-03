@@ -34,38 +34,34 @@ def timer(func: Callable):
     return wrapper
 
 
-def write_summary(path: str, metrics: Dict[str, List], suffix: str = "_summary"):
+def write_summary(path: str, metrics: Dict[str, List]):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters
-    :param path: experiment folder where the summary will be saved, path = f"./results/{experiment}/{run}"
+    :param path: pattern f"./results/{experiment}/{run}", experiment folder where the summary will be saved
     :param metrics: keys are metric names, values are lists of metric values
     :param suffix: suffix name of the summary file
     """
-    split = path.split("/")  # split the path by slashes
-    run_name = split[-1]  # sub-folder name, which is the name of the experiment
-    ex_path = f"{'/'.join(split[:-1])}"
+    components = os.path.normpath(path).split(os.sep)
+    idx = components.index("results")
+    ex_path = f"{'/'.join(components[:idx+2])}"
+    run_name = components[idx+2] if len(components[idx:]) > 2 else "run"  # sub-folder name is the name of the run
     params_key_val = run_name.split("_")  # Split the input string by underscores
     params_key, params_val = _get_params(params_key_val)
-    save_run_summary(ex_path, run_name, params_key, params_val, metrics, "", save="local")
-    save_run_summary(ex_path, run_name, params_key, params_val, metrics, suffix, save="global")
+
+    local_path = f"{ex_path}/{run_name}/"
+    if not os.path.exists(local_path):
+        os.makedirs(local_path)
+
+    write_save_summary(params_key, params_val, metrics, f"{local_path}/perf.csv")
+    write_save_summary(params_key, params_val, metrics, f"{ex_path}_perf.csv")
 
 
-def save_run_summary(ex_path, run_name, params_key, params_val, metrics, suffix, save="local"):
+def write_save_summary(params_key, params_val, metrics, summary_file):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters"""
-    if save == "local":  # save the run in the run folder
-        if len(run_name) == 0:
-            run_name = "run"  # only when no run name is specified when testing
-        local_path = f"{ex_path}{suffix}/{run_name}/"
-        if not os.path.exists(local_path):
-            os.makedirs(local_path)
-        summary_file = f"{local_path}/run_perf.csv"
-    else:
-        summary_file = f"{ex_path}{suffix}.csv"
-    file_exists = os.path.isfile(summary_file)
-
     with open(summary_file, 'a+', newline='') as file:
         writer = csv.writer(file)
+
         # Write the header only if the file does not exist
-        if not file_exists:
+        if not os.path.isfile(summary_file):
             header = ['ex_name'] + params_key
             for key, value in metrics.items():
                 if len(value) > 1:
@@ -73,6 +69,7 @@ def save_run_summary(ex_path, run_name, params_key, params_val, metrics, suffix,
                 else:
                     header.append(key)
             writer.writerow(header)
+
         # write the hyperparameters and metrics
         row = [run_name] + params_val
         for value in metrics.values():
