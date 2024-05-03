@@ -17,8 +17,13 @@ def factorize_configs(config_ranges: Dict[str, List[Any]]) -> List[Dict]:
     return [dict(zip(keys, values)) for values in itertools.product(*values)]
 
 
-def create_filename(config: Dict) -> str:
-    """Create a name for an experiment run based on its training config"""
+def create_run_name(config: Dict) -> str:
+    """Create a name for a run in experiment  based on its training config
+    
+    Example:
+        input: config = {"LR": 0.1, "WD": 0.01, "BATCH_SIZE": 32}
+        output: "LR-0.1_WD-0.01_BATCHSIZE-32"
+    """
     cfg = config.copy()
     if "OPTIM_PARAMS" in cfg.keys():
         optim_params = cfg.pop("OPTIM_PARAMS")
@@ -55,9 +60,10 @@ def create_experiments_configs(
     for config in override_configs:
         new_param = param.copy()
         new_param.update(config)
-        filename = create_filename(config)
-        new_param["FILENAME"] = filename
-        new_param["PATH"] = f"./results/{experiment_name}/{filename}"
+        run_name = create_run_name(config)
+        new_param["RUN_NAME"] = run_name
+        new_param["EX_NAME"] = experiment_name
+        new_param["PATH"] = f"./results/{experiment_name}/{run_name}"
         configs.append(new_param)
 
     print(f"Submitting {len(configs)} jobs...")
@@ -67,8 +73,8 @@ def create_experiments_configs(
 
 def run(func: Callable, ex_configs: List[Dict], slurm_config: Dict[str, Any]):
     for config in ex_configs:
-        log_dir = f"/{SAVE_DIR}/temp/{config['FILENAME']}"
-        slurm_config['name'] = config['FILENAME']
+        log_dir = f"/{SAVE_DIR}/temp/{config['RUN_NAME']}"
+        slurm_config['name'] = config['RUN_NAME']
         executor = submitit.AutoExecutor(folder=log_dir)
         executor.update_parameters(**slurm_config)
         job = executor.submit(func, config)
@@ -84,4 +90,3 @@ def batch_run(func: Callable, ex_configs: List[Dict], slurm_config: Dict[str, An
         jobs = executor.map_array(func, ex_configs[i:i + batch_size])
         for job in jobs:
             print(job.job_id)
-
