@@ -38,7 +38,6 @@ def write_summary(path: str, metrics: Dict[str, List]):
     """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters
     :param path: pattern f"./results/{experiment}/{run}", experiment folder where the summary will be saved
     :param metrics: keys are metric names, values are lists of metric values
-    :param suffix: suffix name of the summary file
     """
     for v in metrics.values():
         assert isinstance(v, (list, tuple, np.ndarray)), "values in metrics should be list, tuple or np.ndarray"
@@ -98,12 +97,28 @@ def get_hyperparams_from_name(run_name):
 
 
 def get_optimizer(params, model):
+    decay_params = []
+    non_decay_params = []
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            if hasattr(param, 'decay') and not param.decay:
+                non_decay_params.append(param)
+            else:
+                decay_params.append(param)
+
     freeze_layers = params.get("FREEZE_LAYERS", None)
     if isinstance(freeze_layers, list) and len(freeze_layers) > 0:
         trainable_parameters = [name for name, param in model.named_parameters() if param.requires_grad]
         print(f"Trainable parameters: {trainable_parameters}")
-    return eval(f"optim.{params['OPTIMIZER']}")(filter(lambda p: p.requires_grad, model.parameters()),
-                                                **params["OPTIM_PARAMS"])
+
+    if decay_params and non_decay_params:
+        print(f"Non-decay parameters: {len(non_decay_params)}")
+        parameter_groups = [{'params': decay_params}, {'params': non_decay_params, 'weight_decay': 0.0}]
+    else:
+        parameter_groups = filter(lambda p: p.requires_grad, model.parameters())
+
+    return eval(f"optim.{params['OPTIMIZER']}")(parameter_groups, **params["OPTIM_PARAMS"])
 
 
 def get_scheduler(params, optimizer):
