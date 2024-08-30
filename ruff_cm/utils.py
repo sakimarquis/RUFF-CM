@@ -166,14 +166,14 @@ def get_expt_name(path):
         raise ValueError(f"cannot find experiment name from path {path}")
 
 
-def get_cache_dir(path, cache_dir="/xdisk/bob/hdx/logdir/"):
+def get_cache_dir(path, cache_dir):
     """store the log files in the cache directory"""
     expt_dir = get_expt_name(path)
     expt_cache_dir = cache_dir + expt_dir
     return expt_cache_dir
 
 
-def get_save_dir(path, save_dir="/groups/bob/hdx/"):
+def get_save_dir(path, save_dir):
     directory = get_expt_name(path)
     path = save_dir + directory
     return path

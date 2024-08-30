@@ -3,7 +3,7 @@ import itertools
 from typing import List, Dict, Any, Callable
 from .utils import load_yaml
 
-SAVE_DIR = "groups/bob/hdx"
+SAVE_DIR = "/home/u1/hdx/"
 
 
 def factorize_configs(config_ranges: Dict[str, List[Any]]) -> List[Dict]:
