@@ -42,6 +42,7 @@ def create_experiments_configs(
         experiment_name: str,
         logger_type: str = "dummy",
         max_jobs: int = 1000,
+        save_dir: str = SAVE_DIR,
 ) -> List[Dict]:
     """Create a list of experiment configurations for submission to the slurm cluster.
     :param base_config: the base configuration file
@@ -53,7 +54,7 @@ def create_experiments_configs(
     override_configs = factorize_configs(config_ranges)
     path = f"./configs/{base_config}"
     param = load_yaml(path)
-    param["LOG_CACHE_DIR"] = f"/{SAVE_DIR}/logdir/"  # log to cache directory
+    param["LOG_CACHE_DIR"] = f"/{save_dir}/logdir/"  # log to cache directory
     param["LOGGER"] = logger_type
 
     configs = []
@@ -71,9 +72,9 @@ def create_experiments_configs(
     return configs
 
 
-def run(func: Callable, ex_configs: List[Dict], slurm_config: Dict[str, Any]):
+def run(func: Callable, ex_configs: List[Dict], slurm_config: Dict[str, Any], save_dir: str = SAVE_DIR):
     for config in ex_configs:
-        log_dir = f"/{SAVE_DIR}/temp/{config['RUN_NAME']}"
+        log_dir = f"/{save_dir}/temp/{config['RUN_NAME']}"
         slurm_config['name'] = config['RUN_NAME']
         executor = submitit.AutoExecutor(folder=log_dir)
         executor.update_parameters(**slurm_config)
@@ -81,9 +82,10 @@ def run(func: Callable, ex_configs: List[Dict], slurm_config: Dict[str, Any]):
         print(job.job_id)
 
 
-def batch_run(func: Callable, ex_configs: List[Dict], slurm_config: Dict[str, Any], batch_size: int = 50):
+def batch_run(func: Callable, ex_configs: List[Dict], slurm_config: Dict[str, Any],
+              batch_size: int = 50, save_dir: str = SAVE_DIR):
     """Submit jobs in batches, smaller batch_size could lead to faster queue time"""
-    log_dir = f"/{SAVE_DIR}/temp/{slurm_config['name']}"
+    log_dir = f"/{save_dir}/temp/{slurm_config['name']}"
     executor = submitit.AutoExecutor(folder=log_dir)
     executor.update_parameters(**slurm_config)
     for i in range(0, len(ex_configs), batch_size):  # submit jobs in batches to avoid OOM
