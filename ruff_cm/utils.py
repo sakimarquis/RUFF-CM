@@ -88,8 +88,23 @@ def get_hyperparams_from_name(run_name):
     """
     params_key_val = run_name.split("_")  # Split the input string by underscores
     try:
-        params_key = [s.split("-")[0] for s in params_key_val]  # Extract the keys before the hyphens
-        params_val = [s.split("-")[1] for s in params_key_val]  # Extract the values after the hyphens
+        # params_key = [s.split("-")[0] for s in params_key_val]  # Extract the keys before the hyphens
+        # params_val = [s.split("-")[1] for s in params_key_val]  # Extract the values after the hyphens
+        result = {}
+        current_key = None
+        current_value = []
+        for pair in params_key_val:
+            if '-' in pair:
+                if current_key:
+                    result[current_key] = '_'.join(current_value)
+                current_key, value = pair.split('-', 1)
+                current_value = [value]
+            else:
+                current_value.append(pair)
+        if current_key:
+            result[current_key] = '_'.join(current_value)
+        params_key = list(result.keys())
+        params_val = list(result.values())
     except IndexError:
         params_key = []  # catch the error if there is nothing before hyphen
         params_val = []  # catch the error if there is nothing after hyphen
