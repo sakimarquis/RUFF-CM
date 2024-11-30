@@ -19,6 +19,13 @@ mpl.rcParams['axes.spines.right'] = False
 mpl.rcParams['axes.spines.top'] = False
 mpl.rcParams['font.family'] = 'arial'
 
+PLOT_CONFIG = {
+    "save": True,
+    "dpi": 600,
+    "save_format": "png",
+    "save_path": "../results/"
+}
+
 
 def set_mpl():
     mpl.rcParams['font.size'] = 8
@@ -29,6 +36,25 @@ def set_mpl():
     mpl.rcParams['axes.spines.right'] = False
     mpl.rcParams['axes.spines.top'] = False
 
+
+def configure_plot(**kwargs):
+    set_mpl()
+    PLOT_CONFIG.update(kwargs)
+
+
+def pretty(plot_func):
+    def wrapper(*args, **kwargs):
+        name = plot_func(*args, **kwargs)
+        PLOT_PARAMS.update({"dpi": PLOT_CONFIG["dpi"]})
+        save_path = PLOT_CONFIG["save_path"]
+        save_format = PLOT_CONFIG["save_format"]
+
+        if PLOT_CONFIG["save"]:
+            plt.savefig(f"{save_path}/{name}.{save_format}", **PLOT_PARAMS)
+        else:
+            plt.show()
+        plt.close()
+    return wrapper
 
 def plot_start(square=True, figsize=None, ticks_pos=True):
     """unified plot params"""
