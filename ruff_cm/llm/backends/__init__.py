@@ -1,4 +1,5 @@
 from .base import BackendCapabilityError, CaptureResult, ChoiceScores, GenerateResult, Generator, HiddenReader, Message, Scorer
+from .hf import HfBackend
 
 __all__ = [
     "BackendCapabilityError",
@@ -6,6 +7,7 @@ __all__ = [
     "ChoiceScores",
     "GenerateResult",
     "Generator",
+    "HfBackend",
     "HiddenReader",
     "Message",
     "Scorer",
