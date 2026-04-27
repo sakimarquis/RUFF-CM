@@ -20,7 +20,7 @@ class GenerateResult:
 @dataclass
 class ChoiceScores:
     method: Literal["exact", "partial"]
-    scores: dict[str, float]
+    scores: dict[str, float | list[float]]
     complete: bool
     missing: list[str]
     fallback_count: int
