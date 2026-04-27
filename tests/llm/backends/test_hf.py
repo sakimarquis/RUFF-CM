@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from ruff_cm.llm.backends.base import BackendCapabilityError, Message
-from ruff_cm.llm.backends.hf import HfBackend
+from ruff_cm.llm.backends.hf import HfBackend, _spec_with_non_pad_last_positions
 from ruff_cm.llm.choice import ChoiceSet
 from ruff_cm.llm.hooks import CaptureMode, CaptureSpec
 
@@ -54,6 +54,15 @@ def test_hf_capture_batched_last_uses_non_pad_positions(backend):
 
     assert result.spec.positions == expected_positions
     assert expected_positions[0][0] < encoded.input_ids.shape[1] - 1
+
+
+def test_hf_last_position_resolution_handles_left_padding():
+    torch = pytest.importorskip("torch")
+    spec = CaptureSpec(mode=CaptureMode.PREFILL, layers=[0], positions="last")
+
+    resolved = _spec_with_non_pad_last_positions(spec, torch.tensor([[0, 0, 1, 1]]))
+
+    assert resolved.positions == [[3]]
 
 
 @pytest.mark.hf

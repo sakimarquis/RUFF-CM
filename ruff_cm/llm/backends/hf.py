@@ -126,7 +126,7 @@ class HfBackend:
 
 
 def _spec_with_non_pad_last_positions(spec: Any, attention_mask: Any) -> Any:
-    positions = [[int(length.item()) - 1] for length in attention_mask.sum(dim=1)]
+    positions = [[int(row.nonzero()[-1].item())] for row in attention_mask]
     return replace(spec, positions=positions)
 
 
