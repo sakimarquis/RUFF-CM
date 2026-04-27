@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from ..hooks import CaptureMode, HiddenCapture
@@ -44,9 +45,10 @@ class HfBackend:
         if seed is not None:
             torch.manual_seed(seed)
 
-        input_ids = self._encode_batch(messages)
+        input_ids, attention_mask = self._encode_batch(messages)
         generated = self._model.generate(
             input_ids,
+            attention_mask=attention_mask,
             max_new_tokens=max_tokens,
             do_sample=temperature > 0,
             temperature=temperature if temperature > 0 else None,
@@ -54,18 +56,20 @@ class HfBackend:
         )
         new_ids = generated[0, input_ids.shape[1] :]
         text = self._tokenizer.decode(new_ids, skip_special_tokens=True)
+        stopped = False
         if stop is not None:
-            text = _trim_stop(text, stop)
-        finish_reason = "length" if new_ids.shape[0] >= max_tokens else "stop"
+            text, stopped = _trim_stop(text, stop)
+        finish_reason = "stop" if stopped or new_ids.shape[0] < max_tokens else "length"
         return GenerateResult(text=text, finish_reason=finish_reason, raw={"token_ids": generated})
 
     def score_choices(self, messages: list[Message], choice_set: Any) -> ChoiceScores:
         torch = self._torch()
         self._ensure_loaded()
-        input_ids = self._encode_batch(messages)
+        input_ids, attention_mask = self._encode_batch(messages)
         with torch.no_grad():
-            outputs = self._model(input_ids, use_cache=False)
-        return choice_set.from_logits(outputs.logits[0, -1, :])
+            outputs = self._model(input_ids, attention_mask=attention_mask, use_cache=False)
+        last_index = attention_mask[0].sum() - 1
+        return choice_set.from_logits(outputs.logits[0, last_index, :])
 
     def capture(self, messages: list[Message] | list[list[Message]], spec: Any) -> CaptureResult:
         if spec.mode == CaptureMode.GENERATE_STEPS:
@@ -74,10 +78,11 @@ class HfBackend:
         torch = self._torch()
         self._ensure_loaded()
         target_text = spec.target_text if spec.mode == CaptureMode.TEACHER_FORCING_SPARSE else None
-        input_ids = self._encode_batch(messages, target_text=target_text)
-        with HiddenCapture(self._model, spec) as capture:
+        input_ids, attention_mask = self._encode_batch(messages, target_text=target_text)
+        capture_spec = _spec_with_non_pad_last_positions(spec, attention_mask) if spec.positions == "last" else spec
+        with HiddenCapture(self._model, capture_spec) as capture:
             with torch.no_grad():
-                outputs = self._model(input_ids, use_cache=False)
+                outputs = self._model(input_ids, attention_mask=attention_mask, use_cache=False)
         return capture.collect(token_ids=input_ids, logits=outputs.logits)
 
     def _ensure_loaded(self) -> None:
@@ -112,7 +117,7 @@ class HfBackend:
             targets = [target_text] if isinstance(target_text, str) else target_text
             prompts = [prompt + target for prompt, target in zip(prompts, targets)]
         encoded = self._tokenizer(prompts, return_tensors="pt", padding=True)
-        return encoded.input_ids.to(self.device)
+        return encoded.input_ids.to(self.device), encoded.attention_mask.to(self.device)
 
     def _torch(self):
         import torch
@@ -120,6 +125,11 @@ class HfBackend:
         return torch
 
 
-def _trim_stop(text: str, stop: list[str]) -> str:
+def _spec_with_non_pad_last_positions(spec: Any, attention_mask: Any) -> Any:
+    positions = [[int(length.item()) - 1] for length in attention_mask.sum(dim=1)]
+    return replace(spec, positions=positions)
+
+
+def _trim_stop(text: str, stop: list[str]) -> tuple[str, bool]:
     stop_positions = [text.find(stop_text) for stop_text in stop if stop_text in text]
-    return text[: min(stop_positions)] if stop_positions else text
+    return (text[: min(stop_positions)], True) if stop_positions else (text, False)

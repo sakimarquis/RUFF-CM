@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from types import SimpleNamespace
 
 import pytest
 
@@ -42,6 +43,20 @@ def test_hf_capture_prefill(backend):
 
 
 @pytest.mark.hf
+def test_hf_capture_batched_last_uses_non_pad_positions(backend):
+    backend._tokenizer.padding_side = "right"
+    messages = [[Message("user", "hi")], [Message("user", "hello world today")]]
+    prompts = [backend._render_chat(sample) for sample in messages]
+    encoded = backend._tokenizer(prompts, return_tensors="pt", padding=True)
+    expected_positions = [[int(length.item()) - 1] for length in encoded.attention_mask.sum(dim=1)]
+
+    result = backend.capture(messages, CaptureSpec(mode=CaptureMode.PREFILL, layers=[0], positions="last"))
+
+    assert result.spec.positions == expected_positions
+    assert expected_positions[0][0] < encoded.input_ids.shape[1] - 1
+
+
+@pytest.mark.hf
 def test_hf_capture_teacher_forcing_sparse(backend):
     result = backend.capture(
         [[Message("user", "hello")], [Message("user", "world")]],
@@ -55,3 +70,17 @@ def test_hf_capture_teacher_forcing_sparse(backend):
 def test_hf_capture_generate_steps_rejected(backend):
     with pytest.raises(BackendCapabilityError):
         backend.capture([Message("user", "hello")], CaptureSpec(mode=CaptureMode.GENERATE_STEPS))
+
+
+def test_hf_generate_stop_trim_sets_stop_finish_reason(monkeypatch):
+    torch = pytest.importorskip("torch")
+    backend = HfBackend("fake", device="cpu")
+    backend._model = SimpleNamespace(generate=lambda *args, **kwargs: torch.tensor([[10, 20, 30, 31]]))
+    backend._tokenizer = SimpleNamespace(pad_token_id=0, decode=lambda token_ids, skip_special_tokens: "answer STOP")
+    monkeypatch.setattr(backend, "_ensure_loaded", lambda: None)
+    monkeypatch.setattr(backend, "_encode_batch", lambda messages: (torch.tensor([[10, 20]]), torch.tensor([[1, 1]])))
+
+    result = backend.generate([Message("user", "hello")], max_tokens=2, stop=[" STOP"])
+
+    assert result.text == "answer"
+    assert result.finish_reason == "stop"
