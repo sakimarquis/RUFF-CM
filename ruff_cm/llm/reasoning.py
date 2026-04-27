@@ -52,6 +52,9 @@ def resolve_thinking(
             display_suffix="_thinking" if enabled else "",
         )
 
+    if backend != "api":
+        return _disabled()
+
     provider = alias_cfg.get("provider")
     if provider == "openai":
         reasoning_effort = config.get("REASONING_EFFORT") or ("medium" if cli_thinking else None)
