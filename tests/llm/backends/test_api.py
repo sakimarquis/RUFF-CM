@@ -23,6 +23,18 @@ def test_api_backend_missing_key_raises(monkeypatch):
         ApiBackend(model="gpt-4o", provider="openai")
 
 
+def test_api_backend_internal_client_disables_sdk_retries(monkeypatch):
+    captured = {}
+
+    class FakeOpenAI:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr("openai.OpenAI", FakeOpenAI)
+    ApiBackend(model="gpt-4o", provider="openai", api_key="sk-test", max_retries=3)
+    assert captured["max_retries"] == 0
+
+
 def test_api_generate_uses_mock_client(fake_openai_client, openai_response_factory):
     fake_openai_client.chat.completions.create.return_value = openai_response_factory(text="hello", finish_reason="stop")
     backend = ApiBackend(model="gpt-4o", provider="openai", client=fake_openai_client, api_key="sk-test")

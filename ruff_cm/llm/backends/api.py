@@ -118,7 +118,7 @@ class ApiBackend:
     def _create_client(self):
         from openai import OpenAI
 
-        kwargs = {"api_key": self.api_key, "max_retries": self.max_retries}
+        kwargs = {"api_key": self.api_key, "max_retries": 0}
         if self.base_url is not None:
             kwargs["base_url"] = self.base_url
         return OpenAI(**kwargs)
