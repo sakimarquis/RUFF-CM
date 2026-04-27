@@ -18,7 +18,7 @@ class ArtifactKey:
     identity_fields: dict[str, Any]
 
     def fingerprint(self) -> str:
-        identity = json.dumps(self.identity_fields, sort_keys=True, separators=(",", ":"), default=str)
+        identity = _canonical_identity_json(self.identity_fields)
         return hashlib.sha256(identity.encode("utf-8")).hexdigest()[:16]
 
     def path(self, root: Path, ext: str = "") -> Path:
@@ -40,7 +40,7 @@ def read_artifact(key: ArtifactKey, root: Path, *, ext: str, strict: bool = True
     payload_path = key.path(root, ext=ext)
     if strict:
         sidecar = json.loads(key.sidecar_path(root).read_text(encoding="utf-8"))
-        if sidecar["fingerprint"] != key.fingerprint() or sidecar["identity_fields"] != key.identity_fields:
+        if sidecar["fingerprint"] != key.fingerprint() or sidecar["identity_fields"] != _canonical_identity(key.identity_fields):
             raise StaleArtifactError(f"stale artifact sidecar for {payload_path}")
     return payload_path.read_bytes()
 
@@ -50,5 +50,13 @@ def _sidecar_payload(key: ArtifactKey) -> dict[str, Any]:
         "namespace": key.namespace,
         "relative_parts": list(key.relative_parts),
         "fingerprint": key.fingerprint(),
-        "identity_fields": key.identity_fields,
+        "identity_fields": _canonical_identity(key.identity_fields),
     }
+
+
+def _canonical_identity(identity_fields: dict[str, Any]) -> Any:
+    return json.loads(_canonical_identity_json(identity_fields))
+
+
+def _canonical_identity_json(identity_fields: dict[str, Any]) -> str:
+    return json.dumps(identity_fields, sort_keys=True, separators=(",", ":"), default=str)

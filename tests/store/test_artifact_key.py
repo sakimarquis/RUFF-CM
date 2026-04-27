@@ -47,3 +47,18 @@ def test_read_artifact_non_strict_reads_payload(tmp_path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"x")
     assert read_artifact(key, tmp_path, ext=".txt", strict=False) == b"x"
+
+
+def test_tuple_identity_strict_read_after_write_succeeds(tmp_path: Path):
+    key = ArtifactKey("generate", ("qwen",), {"shape": (1, 2)})
+    write_artifact(key, tmp_path, b"payload", ext=".bin")
+    assert read_artifact(key, tmp_path, ext=".bin") == b"payload"
+
+
+def test_path_identity_is_stored_as_string_and_strict_read_succeeds(tmp_path: Path):
+    source_path = tmp_path / "prompt.txt"
+    key = ArtifactKey("generate", ("qwen",), {"source": source_path})
+    write_artifact(key, tmp_path, b"payload", ext=".bin")
+    sidecar = json.loads(key.sidecar_path(tmp_path).read_text(encoding="utf-8"))
+    assert sidecar["identity_fields"] == {"source": str(source_path)}
+    assert read_artifact(key, tmp_path, ext=".bin") == b"payload"
