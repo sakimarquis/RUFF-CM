@@ -9,9 +9,14 @@ def test_cell_id_encode_matches_autoname_style():
     assert CellId.encode({"BETA_R": 0.001, "REG": False}) == "BETAR-0.001_REG-False"
 
 
-def test_cell_id_decode_round_trip_for_valid_string_values():
+def test_cell_id_decode_parses_encoded_string_values():
     encoded = CellId.encode({"task": "nback", "lure": False})
     assert CellId.decode(encoded) == {"task": "nback", "lure": "False"}
+
+
+def test_cell_id_decode_returns_normalized_encoded_keys():
+    encoded = CellId.encode({"BETA_R": 0.001, "REG": False})
+    assert CellId.decode(encoded) == {"BETAR": "0.001", "REG": "False"}
 
 
 def test_cell_from_factors_sets_path(tmp_path: Path):

@@ -33,6 +33,12 @@ class CellId:
 
     @staticmethod
     def decode(name: str) -> dict[str, str]:
+        """Parse an autoname string into encoded keys, not original factor keys.
+
+        Legacy autoname strings are lossy: keys are normalized, special cases
+        may expand differently, and underscores in values are ambiguous.
+        Malformed or ambiguous names are allowed to raise.
+        """
         if name == "":
             return {}
         return dict(part.split("-", 1) for part in name.split("_"))
