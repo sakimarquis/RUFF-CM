@@ -80,6 +80,17 @@ def test_logits_follow_capture_dtype_and_device():
     assert result.logits.device.type == "cpu"
 
 
+def test_sparse_valid_mask_follows_capture_device_without_dtype_cast():
+    torch = pytest.importorskip("torch")
+    spec = CaptureSpec(mode=CaptureMode.TEACHER_FORCING_SPARSE, layers=[0], positions=[[0, 1], [0]], dtype=torch.float64, device="meta")
+    capture = HiddenCapture(_one_layer_model(torch), spec)
+    capture.hiddens[0] = torch.randn(2, 2, 3)
+    result = capture.collect()
+    assert result.hiddens[0].device.type == "meta"
+    assert result.valid_mask.device.type == "meta"
+    assert result.valid_mask.dtype == torch.bool
+
+
 def test_enter_clears_previous_hidden_state():
     torch = pytest.importorskip("torch")
     capture = HiddenCapture(_one_layer_model(torch), CaptureSpec(mode=CaptureMode.PREFILL, layers=[0]))

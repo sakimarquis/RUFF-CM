@@ -61,6 +61,8 @@ class HiddenCapture:
         if self.spec.with_logits and logits is not None:
             selected_logits, _ = _select_positions(logits, self.spec.positions)
             selected_logits = _move_tensor(selected_logits, dtype=self.spec.dtype, device=self.spec.device)
+        if valid_mask is not None and self.spec.device is not None:
+            valid_mask = valid_mask.to(device=self.spec.device)
         return CaptureResult(hiddens=selected, logits=selected_logits, token_ids=token_ids, spec=self.spec, valid_mask=valid_mask)
 
     def _capture_layer(self, layer_idx: int):
