@@ -52,24 +52,7 @@ def resolve_thinking(
             display_suffix="_thinking" if enabled else "",
         )
 
-    if backend != "api":
-        return _disabled()
-
-    provider = alias_cfg.get("provider")
-    if provider == "openai":
-        reasoning_effort = config.get("REASONING_EFFORT") or ("medium" if cli_thinking else None)
-        enabled = cli_thinking or reasoning_effort not in (None, "none")
-        return ThinkingConfig(
-            enable_thinking=enabled,
-            thinking_budget=0,
-            reasoning_effort=reasoning_effort,
-            reasoning_budget=int(config.get("REASONING_BUDGET", 0)),
-            google_thinking_level=None,
-            google_reasoning_budget=0,
-            display_suffix="_thinking" if enabled else "",
-        )
-
-    if provider == "google_cloud":
+    if backend == "google_cloud":
         model = alias_cfg["model"]
         default_level = "MINIMAL" if "flash-lite" in model else "HIGH"
         google_thinking_level = "MEDIUM" if cli_thinking and default_level == "MINIMAL" else default_level
@@ -85,5 +68,20 @@ def resolve_thinking(
             google_reasoning_budget=int(config.get("GOOGLE_REASONING_BUDGET", 0)),
             display_suffix="_thinking" if enabled else "",
         )
+
+    if backend == "api":
+        provider = alias_cfg.get("provider")
+        if provider == "openai":
+            reasoning_effort = config.get("REASONING_EFFORT") or ("medium" if cli_thinking else None)
+            enabled = cli_thinking or reasoning_effort not in (None, "none")
+            return ThinkingConfig(
+                enable_thinking=enabled,
+                thinking_budget=0,
+                reasoning_effort=reasoning_effort,
+                reasoning_budget=int(config.get("REASONING_BUDGET", 0)),
+                google_thinking_level=None,
+                google_reasoning_budget=0,
+                display_suffix="_thinking" if enabled else "",
+            )
 
     return _disabled()

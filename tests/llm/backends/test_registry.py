@@ -32,6 +32,20 @@ def test_create_api_backend(tmp_path: Path, monkeypatch):
     assert backend.name == "gpt-4o"
 
 
+def test_create_backend_rejects_google_cloud_backend(tmp_path: Path):
+    path = tmp_path / "aliases.yml"
+    path.write_text("gemini:\n  backend: google_cloud\n  model: gemini-3.1-pro\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="unknown backend 'google_cloud'"):
+        create_backend("gemini", aliases_path=path)
+
+
+def test_create_backend_rejects_unknown_backend(tmp_path: Path):
+    path = tmp_path / "aliases.yml"
+    path.write_text("custom:\n  backend: custom\n  model: custom-model\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="unknown backend 'custom'"):
+        create_backend("custom", aliases_path=path)
+
+
 def test_unknown_alias_raises(tmp_path: Path):
     path = tmp_path / "aliases.yml"
     path.write_text("{}", encoding="utf-8")

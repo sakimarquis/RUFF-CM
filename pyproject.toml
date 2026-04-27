@@ -19,6 +19,9 @@ dev = ["pytest>=7", "pytest-cov", "pytest-mock", "ruff", "openai>=1.0", "transfo
 [tool.setuptools.packages.find]
 include = ["ruff_cm*"]
 
+[tool.setuptools.package-data]
+"ruff_cm.llm.backends" = ["model_aliases.yml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
