@@ -14,12 +14,10 @@ pip install -e ".[dev]"
 
 `ruff_cm.llm` provides small primitives shared by LLM research repos:
 
-- `Message`, `Generator`, `Scorer`, `HiddenReader`
+- `ruff_cm.llm.backends`: `Message`, `Generator`, `Scorer`, `HiddenReader`, `ApiBackend`, `HfBackend`, `create_backend`
+- `ruff_cm.llm`: `ChoiceSet`, `CaptureSpec`, `HiddenCapture`, `resolve_thinking`
 - `ChoiceSet` for single-token exact and partial candidate scoring
 - `CaptureSpec` and `HiddenCapture` for prefill hidden-state capture
-- `ApiBackend` for OpenAI-compatible APIs
-- `HfBackend` for local transformers models
-- `resolve_thinking` for provider-specific thinking/reasoning knobs
 
 ```python
 from ruff_cm.llm.backends import create_backend
