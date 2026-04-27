@@ -60,9 +60,47 @@ def test_hidden_capture_per_sample_sparse_positions(tiny_hf):
     assert result.valid_mask.tolist() == [[True, True], [True, False]]
 
 
+def test_per_sample_sparse_positions_must_match_batch_size():
+    torch = pytest.importorskip("torch")
+    spec = CaptureSpec(mode=CaptureMode.TEACHER_FORCING_SPARSE, layers=[0], positions=[[0]])
+    capture = HiddenCapture(_one_layer_model(torch), spec)
+    capture.hiddens[0] = torch.randn(2, 2, 3)
+    with pytest.raises(ValueError):
+        capture.collect()
+
+
+def test_logits_follow_capture_dtype_and_device():
+    torch = pytest.importorskip("torch")
+    spec = CaptureSpec(mode=CaptureMode.PREFILL, layers=[0], positions="last", with_logits=True, dtype=torch.float64, device="cpu")
+    capture = HiddenCapture(_one_layer_model(torch), spec)
+    capture.hiddens[0] = torch.randn(1, 2, 3)
+    result = capture.collect(logits=torch.randn(1, 2, 5))
+    assert result.hiddens[0].dtype == torch.float64
+    assert result.logits.dtype == torch.float64
+    assert result.logits.device.type == "cpu"
+
+
+def test_enter_clears_previous_hidden_state():
+    torch = pytest.importorskip("torch")
+    capture = HiddenCapture(_one_layer_model(torch), CaptureSpec(mode=CaptureMode.PREFILL, layers=[0]))
+    capture.hiddens[0] = torch.randn(1, 1, 3)
+    with capture:
+        pass
+    assert capture.collect().hiddens == {}
+
+
 def test_unsupported_architecture_raises():
     class NoLayers:
         pass
 
     with pytest.raises(UnsupportedArchitectureError):
         HiddenCapture(NoLayers(), CaptureSpec(mode=CaptureMode.PREFILL))
+
+
+def _one_layer_model(torch):
+    class OneLayerModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.layers = torch.nn.ModuleList([torch.nn.Identity()])
+
+    return OneLayerModel()

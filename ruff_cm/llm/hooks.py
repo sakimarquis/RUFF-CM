@@ -41,6 +41,7 @@ class HiddenCapture:
         self.handles: list[Any] = []
 
     def __enter__(self):
+        self.hiddens.clear()
         for layer_idx in self.layer_indices:
             self.handles.append(self.layers[layer_idx].register_forward_hook(self._capture_layer(layer_idx)))
         return self
@@ -59,6 +60,7 @@ class HiddenCapture:
         selected_logits = None
         if self.spec.with_logits and logits is not None:
             selected_logits, _ = _select_positions(logits, self.spec.positions)
+            selected_logits = _move_tensor(selected_logits, dtype=self.spec.dtype, device=self.spec.device)
         return CaptureResult(hiddens=selected, logits=selected_logits, token_ids=token_ids, spec=self.spec, valid_mask=valid_mask)
 
     def _capture_layer(self, layer_idx: int):
@@ -106,6 +108,8 @@ def _select_positions(tensor: Any, positions: Any) -> tuple[Any, Any | None]:
 def _select_per_sample_positions(tensor: Any, positions: list[Any]) -> tuple[Any, Any]:
     import torch
 
+    if len(positions) != tensor.shape[0]:
+        raise ValueError("per-sample capture positions must match batch size")
     per_sample_indices = [_positions_for_sample(pos, tensor.shape[1]) for pos in positions]
     max_npos = max(len(indices) for indices in per_sample_indices)
     selected = tensor.new_zeros((tensor.shape[0], max_npos, *tensor.shape[2:]))
