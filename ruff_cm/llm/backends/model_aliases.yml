@@ -1,0 +1,10 @@
+qwen3-4b:
+  backend: hf
+  model_id: Qwen/Qwen3-4B
+  dtype: bfloat16
+  device: cuda
+
+gpt-4o:
+  backend: api
+  provider: openai
+  model: gpt-4o-2024-08-06
