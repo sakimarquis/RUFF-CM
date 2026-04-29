@@ -1,14 +1,41 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
+from ruff_cm.llm import HookMode
+from ruff_cm.llm.hooks import UnsupportedArchitectureError
 from ruff_cm.llm.hooks_runtime import (
     WriteHookContext,
     extract_layerwise_at_positions,
     hidden_hooks_context,
     subspace_subtract_hook,
 )
+
+
+def test_hook_mode_is_exported_from_llm_package():
+    assert HookMode
+
+
+@pytest.mark.parametrize("layout", ["model.layers", "transformer.h", "gpt_neox.layers", "transformer.layers", "layers"])
+def test_decoder_layer_lookup_covers_supported_layouts(layout):
+    torch = pytest.importorskip("torch")
+    layers = _add_layers(torch, n_layers=1)
+    model = _wrap_layers(layout, layers)
+    x = torch.ones(1, 2, 3)
+
+    with hidden_hooks_context(model, [0], mode="full_sequence") as captured:
+        layers[0](x)
+
+    assert torch.equal(captured[0], x + 1.0)
+
+
+def test_decoder_layer_lookup_rejects_unsupported_architecture():
+    with pytest.raises(UnsupportedArchitectureError):
+        with hidden_hooks_context(SimpleNamespace(), [0]):
+            pass
 
 
 def test_hidden_hooks_context_captures_last_token_for_selected_layers():
@@ -49,6 +76,17 @@ def test_hidden_hooks_context_captures_positions_and_stops_after_exit():
     assert captured[0].shape == (2, 2, 4)
     assert torch.equal(first_capture, captured[0])
     assert torch.equal(captured[0], x[:, [0, 2]] + 1.0)
+
+
+def test_hidden_hooks_context_reads_first_tuple_output():
+    torch = pytest.importorskip("torch")
+    model = _tuple_model(torch)
+    x = torch.ones(1, 2, 3)
+
+    with hidden_hooks_context(model, [0], mode="full_sequence") as captured:
+        model(x)
+
+    assert torch.equal(captured[0], x + 1.0)
 
 
 def test_extract_layerwise_at_positions_stacks_layers_and_wraps_negative_indices():
@@ -104,7 +142,7 @@ def test_subspace_subtract_hook_removes_basis_component():
     assert torch.equal(corrected, torch.tensor([[[0.0, 4.0]]]))
 
 
-def _toy_model(torch, *, n_layers: int):
+def _add_layers(torch, *, n_layers: int):
     class AddLayer(torch.nn.Module):
         def __init__(self, amount: float):
             super().__init__()
@@ -113,10 +151,28 @@ def _toy_model(torch, *, n_layers: int):
         def forward(self, x):
             return x + self.amount
 
+    return torch.nn.ModuleList(AddLayer(float(i + 1)) for i in range(n_layers))
+
+
+def _wrap_layers(layout: str, layers):
+    if layout == "model.layers":
+        return SimpleNamespace(model=SimpleNamespace(layers=layers))
+    if layout == "transformer.h":
+        return SimpleNamespace(transformer=SimpleNamespace(h=layers))
+    if layout == "gpt_neox.layers":
+        return SimpleNamespace(gpt_neox=SimpleNamespace(layers=layers))
+    if layout == "transformer.layers":
+        return SimpleNamespace(transformer=SimpleNamespace(layers=layers))
+    if layout == "layers":
+        return SimpleNamespace(layers=layers)
+    raise AssertionError(layout)
+
+
+def _toy_model(torch, *, n_layers: int):
     class ToyModel(torch.nn.Module):
         def __init__(self):
             super().__init__()
-            self.layers = torch.nn.ModuleList(AddLayer(float(i + 1)) for i in range(n_layers))
+            self.layers = _add_layers(torch, n_layers=n_layers)
 
         def forward(self, x):
             for layer in self.layers:

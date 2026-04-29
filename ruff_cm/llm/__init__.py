@@ -3,6 +3,7 @@
 from .choice import ChoiceSet
 from .hooks import CaptureMode, CaptureSpec, HiddenCapture
 from .hooks_runtime import (
+    HookMode,
     WriteHookContext,
     extract_layerwise_at_positions,
     hidden_hooks_context,
@@ -26,6 +27,7 @@ __all__ = [
     "CaptureSpec",
     "ChoiceSet",
     "HiddenCapture",
+    "HookMode",
     "TerminalFragment",
     "ThinkingConfig",
     "WriteHookContext",
