@@ -2,7 +2,6 @@ import os
 import re
 import random
 import time
-import hashlib
 import csv
 from typing import List, Dict, Callable
 from ruamel.yaml import YAML
@@ -13,6 +12,7 @@ import torch.optim as optim
 # import psutil
 
 from .logger import Logger, TensorBoardLogger, DummyLogger, WandBLogger
+from ._hashing import hash_string
 
 
 def seed_everything(seed: int) -> None:
@@ -208,14 +208,6 @@ def load_yaml(file_path: str) -> Dict:
     with open(file_path, 'r', encoding='utf-8') as file:
         yaml_dict = yaml.load(file)
     return yaml_dict
-
-
-def hash_string(input_string, uid: str, algorithm='md5', truncate: int = 12):
-    """hash the subject id and return a unique id for the subject"""
-    unique_string = input_string + uid  # append a unique identifier
-    hash_object = hashlib.new(algorithm)
-    hash_object.update(unique_string.encode('utf-8'))
-    return hash_object.hexdigest()[:truncate]
 
 
 def calculate_bic(likelihood: float, num_params: int, sample_size: int) -> float:

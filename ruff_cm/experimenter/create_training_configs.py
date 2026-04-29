@@ -11,7 +11,7 @@ import os
 from ruamel import yaml
 from copy import deepcopy
 
-from ..utils import hash_string
+from .._hashing import hash_string
 
 
 def load_config(path):
