@@ -111,18 +111,27 @@ def _extract_balanced_json_from(text: str, start: int, opener: str) -> str | Non
 
 def parse_json_with_repair(text: str) -> dict | None:
     cleaned = _strip_json_fence(text)
-    payload = extract_balanced_json(_remove_trailing_commas(cleaned), opener="{")
-    if payload is None:
-        return None
-    return _loads_expected(payload, dict)
+    for payload in _balanced_json_candidates(_remove_trailing_commas(cleaned), opener="{"):
+        parsed = _loads_expected(payload, dict)
+        if parsed is not None:
+            return parsed
+    return None
 
 
 def parse_json_array_with_repair(text: str) -> list | None:
     cleaned = _strip_json_fence(text)
-    payload = extract_balanced_json(_remove_trailing_commas(cleaned), opener="[")
-    if payload is None:
-        return None
-    return _loads_expected(payload, list)
+    for payload in _balanced_json_candidates(_remove_trailing_commas(cleaned), opener="["):
+        parsed = _loads_expected(payload, list)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _balanced_json_candidates(text: str, *, opener: str):
+    for match in re.finditer(re.escape(opener), text):
+        payload = _extract_balanced_json_from(text, match.start(), opener)
+        if payload is not None:
+            yield payload
 
 
 def _strip_json_fence(text: str) -> str:

@@ -101,6 +101,10 @@ def test_parse_json_with_repair_trailing_comma():
     assert parse_json_with_repair('{"a": 1,}') == {"a": 1}
 
 
+def test_parse_json_with_repair_skips_balanced_invalid_object():
+    assert parse_json_with_repair('bad {oops} then {"ok": 1}') == {"ok": 1}
+
+
 def test_parse_json_with_repair_keeps_commas_inside_strings():
     assert parse_json_with_repair('{"text": ",}", "a": 1,}') == {"text": ",}", "a": 1}
 
@@ -115,6 +119,10 @@ def test_parse_json_with_repair_unrecoverable_returns_none():
 
 def test_parse_json_array_with_repair_trailing_comma():
     assert parse_json_array_with_repair("[1, 2,]") == [1, 2]
+
+
+def test_parse_json_array_with_repair_skips_balanced_invalid_array():
+    assert parse_json_array_with_repair("bad [oops] then [1, 2]") == [1, 2]
 
 
 def test_parse_json_repair_wrong_top_level_type_returns_none():
