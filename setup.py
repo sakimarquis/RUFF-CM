@@ -12,6 +12,7 @@ setup(
     license='LICENSE.txt',
     install_requires=[
         "numpy",
+        "pandas",
         "pyyaml",
         "ruamel.yaml",
         "submitit",
