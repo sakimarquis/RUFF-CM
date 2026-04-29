@@ -45,11 +45,12 @@ def register_hidden_hooks(
         raise ValueError(f"unknown hook mode: {mode!r}")
 
     layers = _decoder_layers(model)
+    selected_layers = [layers[layer_idx] for layer_idx in layer_indices]
     captured: dict[int, torch.Tensor] = {}
     handles = []
-    for layer_idx in layer_indices:
+    for layer_idx, layer in zip(layer_indices, selected_layers):
         hook = _read_hook(layer_idx, captured, mode=mode, capture_positions=capture_positions)
-        handles.append(layers[layer_idx].register_forward_hook(hook))
+        handles.append(layer.register_forward_hook(hook))
     return handles, captured
 
 
@@ -83,7 +84,8 @@ def extract_layerwise_at_positions(layer_outputs: Any, token_positions: list[int
         if hidden.ndim != 2:
             raise ValueError("layer outputs must have shape (B, S, D) or (S, D)")
         sequence_length = hidden.shape[0]
-        selected_layers.append(torch.stack([hidden[pos % sequence_length] for pos in token_positions], dim=0))
+        indices = [_normalize_position(pos, sequence_length) for pos in token_positions]
+        selected_layers.append(torch.stack([hidden[pos] for pos in indices], dim=0))
     return torch.stack(selected_layers, dim=0).detach().cpu().numpy().astype(np.float32, copy=False)
 
 
@@ -120,9 +122,19 @@ def subspace_subtract_hook(
 ) -> Callable[[torch.Tensor], torch.Tensor]:
     # Project onto the learned subspace, center by the mean projection, then subtract that component.
     def hook(hidden: torch.Tensor) -> torch.Tensor:
-        return hidden - alpha * ((hidden @ basis.T - mean_proj) @ basis)
+        hidden_basis = basis.to(device=hidden.device, dtype=hidden.dtype)
+        hidden_mean_proj = mean_proj.to(device=hidden.device, dtype=hidden.dtype)
+        return hidden - alpha * ((hidden @ hidden_basis.T - hidden_mean_proj) @ hidden_basis)
 
     return hook
+
+
+def _normalize_position(position: int, sequence_length: int) -> int:
+    if position < 0:
+        return position % sequence_length
+    if position >= sequence_length:
+        raise IndexError(f"token position {position} out of range for sequence length {sequence_length}")
+    return position
 
 
 def _read_hook(

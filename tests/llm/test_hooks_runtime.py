@@ -11,6 +11,7 @@ from ruff_cm.llm.hooks_runtime import (
     WriteHookContext,
     extract_layerwise_at_positions,
     hidden_hooks_context,
+    register_hidden_hooks,
     subspace_subtract_hook,
 )
 
@@ -78,6 +79,16 @@ def test_hidden_hooks_context_captures_positions_and_stops_after_exit():
     assert torch.equal(captured[0], x[:, [0, 2]] + 1.0)
 
 
+def test_failed_hidden_hook_registration_leaves_no_partial_hooks():
+    torch = pytest.importorskip("torch")
+    model = _toy_model(torch, n_layers=1)
+
+    with pytest.raises(IndexError):
+        register_hidden_hooks(model, [0, 99])
+
+    assert model.layers[0]._forward_hooks == {}
+
+
 def test_hidden_hooks_context_reads_first_tuple_output():
     torch = pytest.importorskip("torch")
     model = _tuple_model(torch)
@@ -104,6 +115,14 @@ def test_extract_layerwise_at_positions_stacks_layers_and_wraps_negative_indices
     )
     assert extracted.dtype == np.float32
     assert np.array_equal(extracted, expected)
+
+
+def test_extract_layerwise_at_positions_rejects_positive_out_of_range_position():
+    torch = pytest.importorskip("torch")
+    layer_outputs = {0: torch.randn(1, 3, 2)}
+
+    with pytest.raises(IndexError, match="out of range"):
+        extract_layerwise_at_positions(layer_outputs, [3], [0])
 
 
 def test_write_hook_context_mutates_output_only_inside_context():
@@ -140,6 +159,20 @@ def test_subspace_subtract_hook_removes_basis_component():
     corrected = hook(h)
 
     assert torch.equal(corrected, torch.tensor([[[0.0, 4.0]]]))
+
+
+def test_subspace_subtract_hook_matches_hidden_dtype():
+    torch = pytest.importorskip("torch")
+    hook = subspace_subtract_hook(
+        torch.tensor([[1.0, 0.0]], dtype=torch.float32),
+        torch.tensor([0.0], dtype=torch.float32),
+    )
+    h = torch.tensor([[[3.0, 4.0]]], dtype=torch.float64)
+
+    corrected = hook(h)
+
+    assert corrected.dtype == torch.float64
+    assert torch.equal(corrected, torch.tensor([[[0.0, 4.0]]], dtype=torch.float64))
 
 
 def _add_layers(torch, *, n_layers: int):
