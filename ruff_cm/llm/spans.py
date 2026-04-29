@@ -17,6 +17,17 @@ def _diff_span(full, without):
     return start, len(full) - suffix
 
 
+def _message_spans(tokenizer, messages: list[dict[str, str]]) -> list[tuple[int, int]]:
+    spans = []
+    span_start = 0
+    for idx in range(len(messages)):
+        prefix_ids = tokenizer.apply_chat_template(messages[: idx + 1], add_generation_prompt=False, tokenize=True)
+        span_end = len(prefix_ids)
+        spans.append((span_start, span_end))
+        span_start = span_end
+    return spans
+
+
 def assistant_header(tokenizer, *, tokenize: bool = False):
     """Return the assistant generation header introduced by the tokenizer template."""
     messages = [{"role": "user", "content": ""}]
@@ -31,10 +42,7 @@ def locate_message(
 ) -> tuple[list[int], int, int]:
     """Locate the token span introduced by one message in a rendered chat."""
     full_ids = tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt, tokenize=True)
-    without_ids = tokenizer.apply_chat_template(
-        messages[:target_idx] + messages[target_idx + 1:], add_generation_prompt=add_generation_prompt, tokenize=True
-    )
-    start, end = _diff_span(full_ids, without_ids)
+    start, end = _message_spans(tokenizer, messages)[target_idx]
     return full_ids, start, end
 
 
@@ -65,13 +73,9 @@ def tokenize_with_loss_mask(
     labels = [ignore_index] * len(input_ids)
 
     # Prefix growth gives each message its own span even when adjacent content is identical.
-    span_start = 0
-    for idx, message in enumerate(messages):
-        prefix_ids = tokenizer.apply_chat_template(messages[: idx + 1], add_generation_prompt=False, tokenize=True)
-        span_end = len(prefix_ids)
+    for message, (span_start, span_end) in zip(messages, _message_spans(tokenizer, messages)):
         if message["role"] == assistant_role:
             labels[span_start:span_end] = input_ids[span_start:span_end]
-        span_start = span_end
 
     input_ids = input_ids[:max_length]
     labels = labels[:max_length]

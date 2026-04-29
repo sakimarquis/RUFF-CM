@@ -40,6 +40,28 @@ def test_locate_message_span_decodes_target_content():
     assert start < end
 
 
+def test_locate_message_distinguishes_identical_adjacent_messages():
+    tokenizer = FakeTokenizer()
+    messages = [
+        {"role": "user", "content": "question"},
+        {"role": "assistant", "content": "same"},
+        {"role": "assistant", "content": "same"},
+    ]
+
+    first_ids, first_start, first_end = locate_message(tokenizer, messages, target_idx=1)
+    second_ids, second_start, second_end = locate_message(tokenizer, messages, target_idx=2)
+    rendered = tokenizer.decode(first_ids)
+    first_same = rendered.index("same")
+    second_same = rendered.index("same", first_same + len("same"))
+
+    assert first_ids == second_ids
+    assert (first_start, first_end) != (second_start, second_end)
+    assert first_start <= first_same < first_end
+    assert second_start <= second_same < second_end
+    assert "same" in tokenizer.decode(first_ids[first_start:first_end])
+    assert "same" in tokenizer.decode(second_ids[second_start:second_end])
+
+
 def test_find_subsequences_returns_all_occurrences_and_missing_pattern():
     hits = find_subsequences([1, 2, 1, 2, 1], {"pair": [1, 2], "missing": [3]})
 
