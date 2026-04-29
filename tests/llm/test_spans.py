@@ -15,6 +15,9 @@ class FakeTokenizer:
 
 
 class MappingTokenizer:
+    def __init__(self):
+        self.tokenized_return_dict_values = []
+
     def apply_chat_template(self, messages, *, add_generation_prompt=False, tokenize=False, return_dict=True):
         rendered = "".join(f"<|{message['role']}|>{message['content']}\n" for message in messages)
         if add_generation_prompt:
@@ -23,8 +26,7 @@ class MappingTokenizer:
             return rendered
 
         input_ids = list(rendered.encode("utf-8"))
-        if not return_dict:
-            return input_ids
+        self.tokenized_return_dict_values.append(return_dict)
         return {"input_ids": input_ids, "attention_mask": [1] * len(input_ids)}
 
     def decode(self, ids):
@@ -97,6 +99,7 @@ def test_mapping_tokenizer_returns_flat_ids_and_valid_spans():
     assert "answer" in tokenizer.decode(full_ids[start:end])
     assert isinstance(encoded["input_ids"], list)
     assert encoded["labels"][answer_start] == encoded["input_ids"][answer_start]
+    assert False in tokenizer.tokenized_return_dict_values
 
 
 def test_find_subsequences_returns_all_occurrences_and_missing_pattern():
