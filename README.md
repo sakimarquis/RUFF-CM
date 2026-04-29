@@ -34,6 +34,7 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 - `ruff_cm.llm.spans`: `assistant_header`, `locate_message`, `find_subsequences`, `tokenize_with_loss_mask`
   for chat-template-aware token span resolution.
 - `ruff_cm.llm.parsing`: free-form answer extraction, terminal verdict detection, and small JSON repair helpers.
+- `ruff_cm.llm.hooks_runtime`: forward-hook hidden capture, layerwise position extraction, write-hook mutation, and subspace subtraction helpers.
 - `ChoiceSet` scores single-token candidates from full logits (`exact`) or API top-logprobs (`partial`).
 - `CaptureSpec` and `HiddenCapture` capture decoder-layer hidden states for prefill and teacher-forced positions.
 
