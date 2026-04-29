@@ -52,7 +52,7 @@ def looks_like_terminal_verdict(fragment: str, *, max_words: int = 30) -> bool:
 
 
 def terminal_fragment(text: str) -> TerminalFragment | None:
-    """Return the final short verdict fragment with offsets into the original text."""
+    """Return the final eligible line with offsets into the original text."""
 
     for line_match in reversed(list(re.finditer(r"[^\r\n]+", text))):
         raw_line = line_match.group(0)
@@ -61,11 +61,9 @@ def terminal_fragment(text: str) -> TerminalFragment | None:
             continue
 
         leading_ws = len(raw_line) - len(raw_line.lstrip())
-        line_start = line_match.start() + leading_ws
-        fragments = _sentence_fragments(stripped, line_start)
-        for fragment_text, raw_start, raw_end in reversed(fragments):
-            if looks_like_terminal_verdict(fragment_text):
-                return TerminalFragment(fragment_text, raw_start, raw_end)
+        raw_start = line_match.start() + leading_ws
+        raw_end = raw_start + len(stripped)
+        return TerminalFragment(stripped, raw_start, raw_end)
     return None
 
 
@@ -75,11 +73,15 @@ def extract_balanced_json(text: str, *, opener: str = "{") -> str | None:
     if opener not in {"{", "["}:
         raise ValueError("opener must be '{' or '['")
 
-    closer = "}" if opener == "{" else "]"
-    start = text.find(opener)
-    if start < 0:
-        return None
+    for match in re.finditer(re.escape(opener), text):
+        payload = _extract_balanced_json_from(text, match.start(), opener)
+        if payload is not None:
+            return payload
+    return None
 
+
+def _extract_balanced_json_from(text: str, start: int, opener: str) -> str | None:
+    closer = "}" if opener == "{" else "]"
     stack = [closer]
     in_string = False
     escaped = False
@@ -121,17 +123,6 @@ def parse_json_array_with_repair(text: str) -> list | None:
     if payload is None:
         return None
     return _loads_expected(payload, list)
-
-
-def _sentence_fragments(stripped_line: str, raw_start: int) -> list[tuple[str, int, int]]:
-    spans = list(re.finditer(r"[^.!?]+[.!?]?", stripped_line))
-    fragments = []
-    for match in spans:
-        fragment = match.group(0).strip()
-        if fragment:
-            offset = match.start() + len(match.group(0)) - len(match.group(0).lstrip())
-            fragments.append((fragment, raw_start + offset, raw_start + match.end()))
-    return fragments or [(stripped_line, raw_start, raw_start + len(stripped_line))]
 
 
 def _strip_json_fence(text: str) -> str:

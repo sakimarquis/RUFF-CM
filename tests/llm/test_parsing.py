@@ -43,10 +43,16 @@ def test_terminal_fragment_returns_last_verdict_with_raw_span():
     assert fragment == TerminalFragment("Final answer: B", expected_start, expected_start + len("Final answer: B"))
 
 
-def test_terminal_fragment_uses_last_sentence_on_line():
+def test_terminal_fragment_returns_entire_last_eligible_line():
     text = "Work through details. Therefore, the answer is yes."
     fragment = terminal_fragment(text)
-    expected = "Therefore, the answer is yes."
+    assert fragment == TerminalFragment(text, 0, len(text))
+
+
+def test_terminal_fragment_does_not_require_verdict_keywords():
+    text = "# Heading\n- bullet\n  The selected line has no verdict keyword  \n"
+    fragment = terminal_fragment(text)
+    expected = "The selected line has no verdict keyword"
     expected_start = text.index(expected)
     assert fragment == TerminalFragment(expected, expected_start, expected_start + len(expected))
 
@@ -77,6 +83,10 @@ def test_extract_balanced_json_ignores_braces_inside_strings():
 
 def test_extract_balanced_json_unmatched_returns_none():
     assert extract_balanced_json('prefix {"a": [1, 2}') is None
+
+
+def test_extract_balanced_json_skips_bad_opener():
+    assert extract_balanced_json('bad {oops] then {"ok": 1}') == '{"ok": 1}'
 
 
 def test_extract_balanced_json_array_opener():
