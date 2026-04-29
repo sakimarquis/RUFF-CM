@@ -67,6 +67,12 @@ metadata. `create_backend` itself instantiates only `api` and `hf` aliases.
 
 `ruff_cm.experimenter` keeps the original config-grid helpers and adds `Cell`, `CellId`, and `expand_grid` for explicit experiment cell identity.
 
+Sampling helpers cover common experiment subset patterns:
+
+- `balanced_sample(groups, target_n, rng)` samples evenly across groups, shrinking the total when a group lacks capacity.
+- `stratified_sample(items, key_fn=..., n_per_key=..., rng=...)` samples up to `n_per_key` per insertion-ordered key.
+- `balanced_split(df, label_col=..., n_train=..., n_test=..., seed=...)` creates class-balanced train/test DataFrame splits with disjoint indices.
+
 ```python
 from pathlib import Path
 
