@@ -1,7 +1,7 @@
 import importlib
 
 
-__all__ = ["experimenter", "logger", "plotter", "utils"]
+__all__ = ["experimenter", "logger", "plotter", "stats", "utils"]
 
 
 def __getattr__(name):

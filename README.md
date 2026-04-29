@@ -108,6 +108,16 @@ payload = read_artifact(key, Path("artifacts"), ext=".bin")
 - `plot_line_by_position(data, save_path, *, ylabel, title=None, sem=None, x=None)`.
 - `plot_correlation_scatter(df, x_col, xlabel, out_path, *, ylabel="Accuracy", y_col="accuracy")`.
 
+## Stats Helpers
+
+`ruff_cm.stats` provides small statistical helpers for analysis and plotting:
+
+- `format_pvalue(p, italic=False)` formats p-values using common reporting thresholds and LaTeX for very small values.
+- `mean_sem(data)` stacks per-key arrays and returns nan-aware mean and SEM dictionaries.
+- `smooth_curve_ci(df, value_col=..., group_col="position", window=5, ci=1.96)` returns smoothed grouped means
+  and confidence bands.
+- `batched_spearmanr(x, y)` computes Spearman correlations along the last axis with average ranks for ties.
+
 ## Tests
 
 ```bash
