@@ -89,6 +89,17 @@ path = write_artifact(key, Path("artifacts"), b"payload", ext=".bin")
 payload = read_artifact(key, Path("artifacts"), ext=".bin")
 ```
 
+## Plotter Helpers
+
+`ruff_cm.plotter` provides matplotlib styling and plot templates shared by downstream repos:
+
+- `set_mpl(size=8)` — publication defaults (Arial, no top/right spines, dpi=600).
+- `save_fig(fig, path, fmt=None, dpi=300)` — tight-layout save + close.
+- `finalize_with_bottom_legend(fig, axes, ncol=None)` — dedupe legends into one figure-level legend.
+- `plot_line_by_layer(data, layer_indices, save_path, *, ylabel, title=None, sem=None, ylim=None)`.
+- `plot_line_by_position(data, save_path, *, ylabel, title=None, sem=None, x=None)`.
+- `plot_correlation_scatter(df, x_col, xlabel, out_path, *, ylabel="Accuracy", y_col="accuracy")`.
+
 ## Tests
 
 ```bash
