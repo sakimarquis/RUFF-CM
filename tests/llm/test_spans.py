@@ -4,11 +4,28 @@ from ruff_cm.llm.spans import assistant_header, find_subsequences, locate_messag
 
 
 class FakeTokenizer:
-    def apply_chat_template(self, messages, *, add_generation_prompt=False, tokenize=False):
+    def apply_chat_template(self, messages, *, add_generation_prompt=False, tokenize=False, return_dict=False):
         rendered = "".join(f"<|{message['role']}|>{message['content']}\n" for message in messages)
         if add_generation_prompt:
             rendered += "<|assistant|>"
         return list(rendered.encode("utf-8")) if tokenize else rendered
+
+    def decode(self, ids):
+        return bytes(ids).decode("utf-8")
+
+
+class MappingTokenizer:
+    def apply_chat_template(self, messages, *, add_generation_prompt=False, tokenize=False, return_dict=True):
+        rendered = "".join(f"<|{message['role']}|>{message['content']}\n" for message in messages)
+        if add_generation_prompt:
+            rendered += "<|assistant|>"
+        if not tokenize:
+            return rendered
+
+        input_ids = list(rendered.encode("utf-8"))
+        if not return_dict:
+            return input_ids
+        return {"input_ids": input_ids, "attention_mask": [1] * len(input_ids)}
 
     def decode(self, ids):
         return bytes(ids).decode("utf-8")
@@ -60,6 +77,26 @@ def test_locate_message_distinguishes_identical_adjacent_messages():
     assert second_start <= second_same < second_end
     assert "same" in tokenizer.decode(first_ids[first_start:first_end])
     assert "same" in tokenizer.decode(second_ids[second_start:second_end])
+
+
+def test_mapping_tokenizer_returns_flat_ids_and_valid_spans():
+    tokenizer = MappingTokenizer()
+    messages = [
+        {"role": "user", "content": "question"},
+        {"role": "assistant", "content": "answer"},
+    ]
+
+    full_ids, start, end = locate_message(tokenizer, messages, target_idx=1)
+    encoded = tokenize_with_loss_mask(tokenizer, messages)
+    rendered = tokenizer.decode(full_ids)
+    answer_start = rendered.index("answer")
+
+    assert isinstance(full_ids, list)
+    assert all(isinstance(token_id, int) for token_id in full_ids)
+    assert start <= answer_start < end
+    assert "answer" in tokenizer.decode(full_ids[start:end])
+    assert isinstance(encoded["input_ids"], list)
+    assert encoded["labels"][answer_start] == encoded["input_ids"][answer_start]
 
 
 def test_find_subsequences_returns_all_occurrences_and_missing_pattern():

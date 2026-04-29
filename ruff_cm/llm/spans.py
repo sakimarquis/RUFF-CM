@@ -5,6 +5,19 @@ def _as_list(tokens):
     return tokens.tolist() if hasattr(tokens, "tolist") else list(tokens)
 
 
+def _input_ids(tokenized):
+    if hasattr(tokenized, "keys") and "input_ids" in tokenized:
+        tokenized = tokenized["input_ids"]
+    return _as_list(tokenized)
+
+
+def _chat_ids(tokenizer, messages: list[dict[str, str]], *, add_generation_prompt: bool = False) -> list[int]:
+    tokenized = tokenizer.apply_chat_template(
+        messages, add_generation_prompt=add_generation_prompt, tokenize=True, return_dict=False
+    )
+    return _input_ids(tokenized)
+
+
 def _diff_span(full, without):
     start = 0
     while start < len(full) and start < len(without) and full[start] == without[start]:
@@ -21,7 +34,7 @@ def _message_spans(tokenizer, messages: list[dict[str, str]]) -> list[tuple[int,
     spans = []
     span_start = 0
     for idx in range(len(messages)):
-        prefix_ids = tokenizer.apply_chat_template(messages[: idx + 1], add_generation_prompt=False, tokenize=True)
+        prefix_ids = _chat_ids(tokenizer, messages[: idx + 1])
         span_end = len(prefix_ids)
         spans.append((span_start, span_end))
         span_start = span_end
@@ -31,8 +44,12 @@ def _message_spans(tokenizer, messages: list[dict[str, str]]) -> list[tuple[int,
 def assistant_header(tokenizer, *, tokenize: bool = False):
     """Return the assistant generation header introduced by the tokenizer template."""
     messages = [{"role": "user", "content": ""}]
-    prompted = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=tokenize)
-    plain = tokenizer.apply_chat_template(messages, add_generation_prompt=False, tokenize=tokenize)
+    if tokenize:
+        prompted = _chat_ids(tokenizer, messages, add_generation_prompt=True)
+        plain = _chat_ids(tokenizer, messages, add_generation_prompt=False)
+    else:
+        prompted = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+        plain = tokenizer.apply_chat_template(messages, add_generation_prompt=False, tokenize=False)
     start, end = _diff_span(prompted, plain)
     return prompted[start:end]
 
@@ -41,7 +58,7 @@ def locate_message(
     tokenizer, messages: list[dict[str, str]], *, target_idx: int, add_generation_prompt: bool = True
 ) -> tuple[list[int], int, int]:
     """Locate the token span introduced by one message in a rendered chat."""
-    full_ids = tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt, tokenize=True)
+    full_ids = _chat_ids(tokenizer, messages, add_generation_prompt=add_generation_prompt)
     start, end = _message_spans(tokenizer, messages)[target_idx]
     return full_ids, start, end
 
@@ -69,7 +86,7 @@ def tokenize_with_loss_mask(
     assistant_role: str = "assistant",
     ignore_index: int = -100,
 ) -> dict[str, list[int]]:
-    input_ids = tokenizer.apply_chat_template(messages, add_generation_prompt=False, tokenize=True)
+    input_ids = _chat_ids(tokenizer, messages)
     labels = [ignore_index] * len(input_ids)
 
     # Prefix growth gives each message its own span even when adjacent content is identical.
