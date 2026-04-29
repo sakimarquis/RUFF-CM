@@ -5,11 +5,7 @@ Created on Fri Mar 25 12:08:53 2022
 @author: saki
 """
 
-import json
 from pathlib import Path
-import subprocess
-import sys
-from types import SimpleNamespace
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -146,10 +142,12 @@ def plot_correlation_scatter(
     y_col: str = "accuracy",
 ) -> None:
     # Fit annotation stays in the template so downstream plots report statistics consistently.
+    from scipy.stats import linregress
+
     set_mpl()
     x = df[x_col].to_numpy()
     y = df[y_col].to_numpy()
-    fit = _linregress(x, y)
+    fit = linregress(x, y)
     x_line = np.linspace(x.min(), x.max(), 100)
 
     fig, ax = plt.subplots(figsize=(2.5, 2.2))
@@ -159,28 +157,6 @@ def plot_correlation_scatter(
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     save_fig(fig, out_path)
-
-
-def _linregress(x, y):
-    if "torch" not in sys.modules:
-        from scipy.stats import linregress
-
-        return linregress(x, y)
-
-    # SciPy and torch can initialize conflicting OpenMP runtimes in one Windows process.
-    payload = json.dumps({"x": np.asarray(x, dtype=float).tolist(), "y": np.asarray(y, dtype=float).tolist()})
-    code = (
-        "import json, sys; "
-        "from scipy.stats import linregress; "
-        "payload = json.loads(sys.stdin.read()); "
-        "fit = linregress(payload['x'], payload['y']); "
-        "print(json.dumps({"
-        "'slope': float(fit.slope), 'intercept': float(fit.intercept), "
-        "'rvalue': float(fit.rvalue), 'pvalue': float(fit.pvalue)"
-        "}))"
-    )
-    result = subprocess.run([sys.executable, "-c", code], input=payload, capture_output=True, text=True, check=True)
-    return SimpleNamespace(**json.loads(result.stdout))
 
 
 def configure_plot(**kwargs):
