@@ -84,3 +84,21 @@ def test_tokenize_with_loss_mask_handles_back_to_back_assistant_turns():
 
     assert encoded["labels"][first_start] == encoded["input_ids"][first_start]
     assert encoded["labels"][second_start] == encoded["input_ids"][second_start]
+
+
+def test_tokenize_with_loss_mask_labels_identical_back_to_back_assistant_turns():
+    tokenizer = FakeTokenizer()
+    messages = [
+        {"role": "user", "content": "question"},
+        {"role": "assistant", "content": "same"},
+        {"role": "assistant", "content": "same"},
+    ]
+
+    encoded = tokenize_with_loss_mask(tokenizer, messages)
+    rendered = tokenizer.decode(encoded["input_ids"])
+    first_start = rendered.index("same")
+    second_start = rendered.index("same", first_start + len("same"))
+
+    for start in (first_start, second_start):
+        end = start + len("same")
+        assert encoded["labels"][start:end] == encoded["input_ids"][start:end]

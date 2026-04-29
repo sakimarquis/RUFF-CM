@@ -64,11 +64,14 @@ def tokenize_with_loss_mask(
     input_ids = tokenizer.apply_chat_template(messages, add_generation_prompt=False, tokenize=True)
     labels = [ignore_index] * len(input_ids)
 
-    # Assistant message spans are the supervised positions; all other template tokens stay ignored.
+    # Prefix growth gives each message its own span even when adjacent content is identical.
+    span_start = 0
     for idx, message in enumerate(messages):
+        prefix_ids = tokenizer.apply_chat_template(messages[: idx + 1], add_generation_prompt=False, tokenize=True)
+        span_end = len(prefix_ids)
         if message["role"] == assistant_role:
-            _, start, end = locate_message(tokenizer, messages, target_idx=idx, add_generation_prompt=False)
-            labels[start:end] = input_ids[start:end]
+            labels[span_start:span_end] = input_ids[span_start:span_end]
+        span_start = span_end
 
     input_ids = input_ids[:max_length]
     labels = labels[:max_length]
