@@ -121,6 +121,16 @@ def test_balanced_split_asserts_each_class_has_enough_rows():
     raise AssertionError("expected per-class capacity assertion")
 
 
+def test_balanced_split_asserts_unique_index():
+    df = pd.DataFrame({"label": ["a"] * 4 + ["b"] * 4, "value": range(8)}, index=[0, 0, 1, 2, 3, 4, 5, 6])
+
+    try:
+        balanced_split(df, label_col="label", n_train=4, n_test=4)
+    except AssertionError:
+        return
+    raise AssertionError("expected unique-index assertion")
+
+
 def test_balanced_split_deterministic_for_fixed_seed():
     df = pd.DataFrame({"label": ["a"] * 6 + ["b"] * 6, "value": range(12)}, index=list(range(100, 112)))
 

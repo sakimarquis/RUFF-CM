@@ -57,6 +57,8 @@ def stratified_sample(items: Iterable[T], *, key_fn: Callable[[T], K], n_per_key
 
 
 def balanced_split(df: Any, *, label_col: str, n_train: int, n_test: int, seed: int = 42) -> tuple[Any, Any]:
+    assert df.index.is_unique
+
     labels = list(dict.fromkeys(df[label_col]))
     assert n_train % len(labels) == 0
     assert n_test % len(labels) == 0
