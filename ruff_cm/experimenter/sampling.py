@@ -70,6 +70,7 @@ def balanced_split(df: Any, *, label_col: str, n_train: int, n_test: int, seed: 
     # Shuffle each class independently so train/test balance is controlled before final row-order randomization.
     for label in labels:
         indices = list(df.index[df[label_col] == label])
+        assert len(indices) >= n_train_per_label + n_test_per_label
         rng.shuffle(indices)
         train_indices.extend(indices[:n_train_per_label])
         test_indices.extend(indices[n_train_per_label : n_train_per_label + n_test_per_label])
