@@ -59,3 +59,38 @@ def test_from_top_logprobs_returns_partial_missing_without_sentinel():
     assert scores.missing == ["C"]
     assert set(scores.scores) == {"A", "B"}
     assert all(math.isfinite(v) for v in scores.scores.values())
+
+
+def test_from_logits_uses_max_aggregation_by_default():
+    torch = pytest.importorskip("torch")
+    logits = torch.tensor([0.0, 1.0, 3.0, 2.0, -5.0, -6.0])
+    scores = ChoiceSet(FakeTokenizer(), ["A", "B"], variants=["raw", "with_space"]).from_logits(logits, normalize=False)
+    assert scores.scores == {"A": 3.0, "B": 2.0}
+
+
+def test_from_logits_supports_logsumexp_aggregation():
+    torch = pytest.importorskip("torch")
+    logits = torch.tensor([0.0, 1.0, 3.0, 2.0, -5.0, -6.0])
+    scores = ChoiceSet(
+        FakeTokenizer(),
+        ["A", "B"],
+        variants=["raw", "with_space"],
+        aggregation="logsumexp",
+    ).from_logits(logits, normalize=False)
+    assert scores.scores["A"] == pytest.approx(float(torch.logsumexp(torch.tensor([0.0, 3.0]), dim=0)))
+    assert scores.scores["B"] == pytest.approx(float(torch.logsumexp(torch.tensor([1.0, 2.0]), dim=0)))
+
+
+def test_from_top_logprobs_supports_logsumexp_aggregation():
+    choice_set = ChoiceSet(FakeTokenizer(), ["A", "B"], variants=["raw", "with_space"], aggregation="logsumexp")
+    scores = choice_set.from_top_logprobs(
+        {"A": -2.0, " A": -0.5, "B": -1.0, " B": -3.0},
+        normalize=False,
+    )
+    assert scores.scores["A"] == pytest.approx(math.log(math.exp(-2.0) + math.exp(-0.5)))
+    assert scores.scores["B"] == pytest.approx(math.log(math.exp(-1.0) + math.exp(-3.0)))
+
+
+def test_unknown_choice_aggregation_fails_fast():
+    with pytest.raises(ValueError, match="unknown choice aggregation"):
+        ChoiceSet(FakeTokenizer(), ["A"], aggregation="mean")

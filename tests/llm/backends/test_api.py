@@ -5,6 +5,7 @@ import pytest
 from ruff_cm.llm.backends.api import PROVIDERS, ApiBackend, ProviderConfig
 from ruff_cm.llm.backends.base import BackendCapabilityError, Message
 from ruff_cm.llm.choice import ChoiceSet
+from ruff_cm.llm.reasoning import ThinkingConfig
 
 
 class FakeTokenizer:
@@ -52,3 +53,16 @@ def test_api_score_choices_returns_partial_missing_without_fallback(fake_openai_
     assert result.complete is False
     assert result.missing == ["C"]
     assert result.fallback_count == 0
+
+
+def test_api_backend_lowers_openai_reasoning_request(fake_openai_client, openai_response_factory):
+    fake_openai_client.chat.completions.create.return_value = openai_response_factory("ok")
+    backend = ApiBackend("gpt-5.4", provider="openai", api_key="key", client=fake_openai_client)
+    backend.generate(
+        [Message("user", "hi")],
+        max_tokens=5,
+        thinking=ThinkingConfig(True, 0, "medium", 0, None, 0, "_thinking"),
+    )
+    body = fake_openai_client.chat.completions.create.call_args.kwargs
+    assert body["max_completion_tokens"] == 5
+    assert body["reasoning_effort"] == "medium"

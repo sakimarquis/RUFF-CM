@@ -13,11 +13,16 @@ class ChoiceSet:
         candidates: Sequence[str],
         variants: Iterable[str] = ("raw",),
         decorators: Iterable[str] = ("{c}",),
+        aggregation: str = "max",
     ):
+        if aggregation not in {"max", "logsumexp"}:
+            raise ValueError(f"unknown choice aggregation {aggregation!r}")
+
         self._tokenizer = tokenizer
         self._candidates = list(candidates)
         self._variants = tuple(variants)
         self._decorators = tuple(decorators)
+        self._aggregation = aggregation
         self._token_map: dict[str, list[int]] = {}
         self._rendered: dict[str, list[str]] = {}
 
@@ -54,7 +59,7 @@ class ChoiceSet:
     def from_logits(self, logits, normalize: bool = True) -> ChoiceScores:
         import torch
 
-        candidate_scores = [logits[..., token_ids].max(dim=-1).values for token_ids in self._token_map.values()]
+        candidate_scores = [self._aggregate_logits(logits[..., token_ids]) for token_ids in self._token_map.values()]
         score_tensor = torch.stack(candidate_scores, dim=-1)
         if normalize:
             score_tensor = torch.log_softmax(score_tensor, dim=-1)
@@ -68,7 +73,7 @@ class ChoiceSet:
         for candidate in self._candidates:
             scores = [top_logprobs[rendered] for rendered in self._rendered[candidate] if rendered in top_logprobs]
             if scores:
-                present[candidate] = max(scores)
+                present[candidate] = self._aggregate_python_scores(scores)
             else:
                 missing.append(candidate)
 
@@ -77,6 +82,22 @@ class ChoiceSet:
             present = {candidate: score - normalizer for candidate, score in present.items()}
 
         return ChoiceScores(method="partial", scores=present, complete=not missing, missing=missing, fallback_count=0)
+
+    def _aggregate_logits(self, values):
+        import torch
+
+        if self._aggregation == "max":
+            return values.max(dim=-1).values
+        if self._aggregation == "logsumexp":
+            return torch.logsumexp(values, dim=-1)
+        raise ValueError(f"unknown choice aggregation {self._aggregation!r}")
+
+    def _aggregate_python_scores(self, scores: list[float]) -> float:
+        if self._aggregation == "max":
+            return max(scores)
+        if self._aggregation == "logsumexp":
+            return math.log(sum(math.exp(score) for score in scores))
+        raise ValueError(f"unknown choice aggregation {self._aggregation!r}")
 
     def _render_candidate(self, candidate: str) -> list[str]:
         rendered: list[str] = []

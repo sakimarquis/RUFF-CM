@@ -2,46 +2,10 @@ from __future__ import annotations
 
 import os
 import time
-from dataclasses import dataclass, field
 from typing import Any
 
 from .base import BackendCapabilityError, ChoiceScores, GenerateResult, Message
-
-
-@dataclass(frozen=True)
-class ProviderConfig:
-    name: str
-    base_url: str | None
-    api_key_env: str
-    capabilities: frozenset[str] = field(default_factory=frozenset)
-
-
-PROVIDERS = {
-    "openai": ProviderConfig(
-        "openai",
-        None,
-        "OPENAI_API_KEY",
-        frozenset({"generate", "score_partial", "system_role", "seed", "json_schema", "thinking"}),
-    ),
-    "openrouter": ProviderConfig(
-        "openrouter",
-        "https://openrouter.ai/api/v1",
-        "OPENROUTER_API_KEY",
-        frozenset({"generate", "score_partial", "system_role"}),
-    ),
-    "vllm": ProviderConfig(
-        "vllm",
-        None,
-        "VLLM_API_KEY",
-        frozenset({"generate", "score_partial", "system_role", "seed"}),
-    ),
-    "sglang": ProviderConfig(
-        "sglang",
-        None,
-        "SGLANG_API_KEY",
-        frozenset({"generate", "score_partial", "system_role", "seed"}),
-    ),
-}
+from .providers import PROVIDERS, ProviderConfig, lower_chat_request, resolve_provider_config
 
 _SUPPORTED_CAPABILITIES = frozenset({"generate", "score_partial", "system_role", "seed", "json_schema", "thinking"})
 _RETRYABLE_ERROR_NAMES = frozenset({"RateLimitError", "APITimeoutError", "APIConnectionError"})
@@ -59,14 +23,15 @@ class ApiBackend:
         name: str | None = None,
         max_retries: int = 3,
     ):
-        if provider not in PROVIDERS:
-            raise ValueError(f"unknown api provider {provider!r}")
-
         self.model = model
         self.provider = provider
-        self.provider_config = PROVIDERS[provider]
+        self.provider_config = resolve_provider_config(provider)
         self.base_url = base_url if base_url is not None else self.provider_config.base_url
-        self.api_key = api_key if api_key is not None else os.environ.get(self.provider_config.api_key_env)
+        self.api_key = (
+            api_key
+            if api_key is not None
+            else os.environ.get(self.provider_config.api_key_env, self.provider_config.default_api_key)
+        )
         self.name = name or model
         self.max_retries = max_retries
         self.capabilities = self.provider_config.capabilities & _SUPPORTED_CAPABILITIES
@@ -83,18 +48,19 @@ class ApiBackend:
         max_tokens: int = 256,
         stop: list[str] | None = None,
         seed: int | None = None,
+        thinking: Any | None = None,
     ) -> GenerateResult:
         self._require("generate")
-        body = {
-            "model": self.model,
-            "messages": self._message_dicts(messages),
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-        if stop is not None:
-            body["stop"] = stop
-        if seed is not None and "seed" in self.provider_config.capabilities:
-            body["seed"] = seed
+        body = lower_chat_request(
+            provider=self.provider,
+            model=self.model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stop=stop,
+            seed=seed,
+            thinking=thinking,
+        )
 
         response = self._call_chat(body)
         choice = response.choices[0]

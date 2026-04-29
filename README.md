@@ -31,6 +31,11 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
   `HiddenReader`, `ApiBackend`, `HfBackend`, `create_backend`, and `load_aliases`.
 - `ruff_cm.llm`: `ChoiceSet`, `CaptureMode`, `CaptureSpec`, `HiddenCapture`, `ThinkingConfig`, and
   `resolve_thinking`.
+- `ruff_cm.llm.execution`: `forward_hidden_only`, `forward_query_logits`, and `forward_selected_logits` for
+  query-position logits without forcing downstream code to materialize more tensor output than it needs.
+- `ruff_cm.llm.locator`: `BoundaryPlan` and token-position helpers for converting semantic boundaries into
+  capture/query positions.
+- `ruff_cm.llm.batch`: `RequestRecord`, `JobManifest`, and ordered result collection for provider batch adapters.
 - `ruff_cm.llm.spans`: `assistant_header`, `locate_message`, `find_subsequences`, `tokenize_with_loss_mask`
   for chat-template-aware token span resolution.
 - `ruff_cm.llm.parsing`: free-form answer extraction, terminal verdict detection, and small JSON repair helpers.
@@ -65,6 +70,9 @@ and hidden capture. Captured hidden tensors are keyed by decoder layer; selected
 `resolve_thinking` normalizes downstream thinking-mode config for HF, OpenAI API aliases, and Google Cloud alias
 metadata. `create_backend` itself instantiates only `api` and `hf` aliases.
 
+The toolkit intentionally does not own downstream task loops, provider batch submission, result layouts,
+prompt/verifier frameworks, or analysis pipelines.
+
 ## Experiment Helpers
 
 `ruff_cm.experimenter` keeps the original config-grid helpers and adds `Cell`, `CellId`, and `expand_grid` for explicit experiment cell identity.
@@ -88,6 +96,9 @@ for cell in cells:
 ## Artifact Identity
 
 `ruff_cm.store.ArtifactKey` standardizes identity fingerprints without imposing a shared results directory layout or file format.
+`ruff_cm.store.cache_metadata` provides fixed-path metadata sidecars for stale-cache checks.
+`ruff_cm.store.prefix_cache` provides tuple-prefix JSON codecs and trajectory reconstruction helpers.
+`ruff_cm.store.ArtifactBundle` stores metadata plus named bundle members such as memmaps.
 
 ```python
 from pathlib import Path
