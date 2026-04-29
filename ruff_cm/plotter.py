@@ -50,6 +50,9 @@ def save_fig(fig, path, *, fmt: str | None = None, dpi: int = 300):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
+    bottom_pad = getattr(fig, "_ruff_cm_bottom_legend_pad", None)
+    if bottom_pad is not None and fig.subplotpars.bottom < bottom_pad:
+        fig.subplots_adjust(bottom=bottom_pad)
     fig.savefig(path, format=fmt, dpi=dpi, bbox_inches="tight", pad_inches=0.1)
     plt.close(fig)
 
@@ -73,6 +76,7 @@ def finalize_with_bottom_legend(fig, axes, *, ncol: int | None = None, bottom_pa
         frameon=False,
     )
     fig.subplots_adjust(bottom=bottom_pad)
+    fig._ruff_cm_bottom_legend_pad = bottom_pad
 
 
 def plot_line_by_layer(

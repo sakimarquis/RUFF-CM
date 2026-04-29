@@ -10,7 +10,7 @@ authors = [{name = "Hua-Dong Xiong", email = "hdx@arizona.edu"}]
 readme = "README.md"
 license = {text = "See LICENSE"}
 requires-python = ">=3.10"
-dependencies = ["numpy", "pyyaml", "ruamel.yaml", "submitit", "torch", "tensorboard", "wandb", "matplotlib"]
+dependencies = ["numpy", "pyyaml", "ruamel.yaml", "submitit", "torch", "tensorboard", "wandb", "matplotlib", "scipy"]
 
 [project.optional-dependencies]
 llm = ["openai>=1.0", "transformers>=4.40", "tiktoken"]

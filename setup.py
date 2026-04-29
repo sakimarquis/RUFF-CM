@@ -15,5 +15,6 @@ setup(
         "pyyaml",
         "ruamel.yaml",
         "submitit",
+        "scipy",
     ],
 )

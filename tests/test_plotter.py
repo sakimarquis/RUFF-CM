@@ -46,6 +46,20 @@ def test_finalize_with_bottom_legend_deduplicates_axes_legends():
     assert all(ax.get_legend() is None for ax in axes)
 
 
+def test_save_fig_preserves_bottom_legend_padding(tmp_path):
+    fig, axes = plt.subplots(1, 2)
+    for ax in axes:
+        ax.plot([0, 1], [0, 1], label="same")
+        ax.legend()
+    path = tmp_path / "legend.pdf"
+
+    plotter.finalize_with_bottom_legend(fig, axes, bottom_pad=0.3)
+    plotter.save_fig(fig, path)
+
+    assert path.stat().st_size > 0
+    assert fig.subplotpars.bottom >= 0.3
+
+
 def test_plot_line_by_layer_writes_pdf(tmp_path):
     rng = np.random.default_rng(0)
     data = {"base": rng.random(4), "cot": rng.random(4)}
