@@ -38,6 +38,16 @@ def pool_span(hidden, span: "TokenSpan | tuple[int, int]", mode: PoolMode):
     raise ValueError(f"unknown pool mode: {mode!r}; expected one of {_VALID_MODES}")
 
 
+def pool_spans(hidden, spans: Sequence["TokenSpan | tuple[int, int]"], mode: PoolMode):
+    """Stack pool_span over multiple spans along a new leading dim."""
+    import torch
+
+    if not spans:
+        raise ValueError("pool_spans requires at least one span")
+    pooled = [pool_span(hidden, span, mode) for span in spans]
+    return torch.stack(pooled, dim=0)
+
+
 def _mean_pool_dtype_safe(hidden):
     """Mean over the second-to-last dim with fp32 accumulation, restoring dtype."""
     import torch

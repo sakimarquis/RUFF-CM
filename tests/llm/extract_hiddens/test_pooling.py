@@ -2,7 +2,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from ruff_cm.llm.extract_hiddens.pooling import pool_span
+from ruff_cm.llm.extract_hiddens.pooling import pool_span, pool_spans
 from ruff_cm.llm.trajectory import TokenSpan
 
 
@@ -66,3 +66,27 @@ def test_pool_span_rejects_empty_span():
     hidden = torch.zeros(3, 2)
     with pytest.raises(ValueError):
         pool_span(hidden, TokenSpan(2, 2), "mean")
+
+
+def test_pool_spans_returns_stacked_tensor():
+    hidden = torch.arange(20, dtype=torch.float32).view(10, 2)
+    spans = [TokenSpan(0, 3), TokenSpan(3, 6), TokenSpan(7, 10)]
+    pooled = pool_spans(hidden, spans, "mean")
+    assert pooled.shape == (3, 2)
+    assert torch.allclose(pooled[0], hidden[0:3].mean(dim=0))
+    assert torch.allclose(pooled[1], hidden[3:6].mean(dim=0))
+    assert torch.allclose(pooled[2], hidden[7:10].mean(dim=0))
+
+
+def test_pool_spans_supports_batched_hidden():
+    hidden = torch.arange(60, dtype=torch.float32).view(2, 10, 3)
+    spans = [TokenSpan(0, 3), TokenSpan(3, 6)]
+    pooled = pool_spans(hidden, spans, "mean")
+    assert pooled.shape == (2, 2, 3)
+    assert torch.allclose(pooled[0, 0], hidden[0, 0:3].mean(dim=0))
+
+
+def test_pool_spans_empty_input_raises():
+    hidden = torch.zeros(5, 2)
+    with pytest.raises(ValueError):
+        pool_spans(hidden, [], "mean")
