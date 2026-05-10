@@ -30,3 +30,28 @@ class Stage:
     name: str
     run: Callable[[MutableMapping[str, Any]], None]
     enabled: Callable[[Mapping[str, Any]], bool] = field(default=lambda ctx: True)
+
+
+class Pipeline:
+    """Runs Stages in declared order, banner + skip on each."""
+
+    def __init__(self, stages: Sequence[Stage]) -> None:
+        self._stages: tuple[Stage, ...] = tuple(stages)
+
+    def __iter__(self):
+        return iter(self._stages)
+
+    def __len__(self) -> int:
+        return len(self._stages)
+
+    def run(
+        self,
+        ctx: MutableMapping[str, Any],
+        *,
+        log: Callable[[str], None] = print,
+    ) -> None:
+        for stage in self._stages:
+            if not stage.enabled(ctx):
+                continue
+            banner(stage.name, log=log)
+            stage.run(ctx)
