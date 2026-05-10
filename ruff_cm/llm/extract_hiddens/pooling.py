@@ -55,6 +55,32 @@ def pool_layered(
     return {layer: pool_span(hidden, span, mode) for layer, hidden in layer_hiddens.items()}
 
 
+def pool_for(traj: "Trajectory", hidden, selector: str, mode: PoolMode):
+    """Resolve a Trajectory selector to a single span, then pool."""
+    return pool_span(hidden, _resolve_selector(traj, selector), mode)
+
+
+def _resolve_selector(traj: "Trajectory", selector: str):
+    """Resolve role names, canonical trajectory spans, or segment names to one span."""
+    role_spans = traj.role_spans.get(selector)
+    if role_spans is not None:
+        if len(role_spans) != 1:
+            raise ValueError(
+                f"selector {selector!r} resolves to multiple spans ({len(role_spans)}); "
+                "use pool_spans(hidden, traj.role_spans[role], mode) instead"
+            )
+        return role_spans[0]
+    if selector == "thinking":
+        if traj.thinking_span is None:
+            raise ValueError("trajectory has no thinking span")
+        return traj.thinking_span
+    if selector == "terminal_answer":
+        if traj.terminal_answer is None:
+            raise ValueError("trajectory has no terminal_answer span")
+        return traj.terminal_answer
+    return traj.by_name(selector).token_span
+
+
 def _mean_pool_dtype_safe(hidden):
     """Mean over the second-to-last dim with fp32 accumulation, restoring dtype."""
     import torch

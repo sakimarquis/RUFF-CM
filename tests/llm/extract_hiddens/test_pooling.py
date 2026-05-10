@@ -2,7 +2,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from ruff_cm.llm.extract_hiddens.pooling import pool_layered, pool_span, pool_spans
+from ruff_cm.llm.extract_hiddens.pooling import pool_for, pool_layered, pool_span, pool_spans
 from ruff_cm.llm.trajectory import TokenSpan
 
 
@@ -107,3 +107,55 @@ def test_pool_layered_preserves_layer_keys():
     layers = {3: torch.zeros(4, 2), 7: torch.zeros(4, 2)}
     pooled = pool_layered(layers, TokenSpan(0, 2), "first")
     assert sorted(pooled) == [3, 7]
+
+
+def test_pool_for_resolves_assistant_role():
+    from ruff_cm.llm.mask import TokenContext
+    from ruff_cm.llm.trajectory import Segment, Trajectory
+
+    text = "user-q assistant-a"
+    tokens = (1, 2, 3, 4, 5, 6, 7)
+    segments = (
+        Segment(name="user_1", role="user", text="user-q", char_span=(0, 6), token_span=(0, 3)),
+        Segment(name="assistant_1", role="assistant", text="assistant-a", char_span=(7, 18), token_span=(3, 7)),
+    )
+    context = TokenContext(tokens=list(tokens), text=text, char_offsets=[(0, 0)] * 7, spans={}, role_at=[None] * 7)
+    traj = Trajectory(text=text, tokens=tokens, segments=segments, context=context)
+
+    hidden = torch.arange(7 * 4, dtype=torch.float32).view(7, 4)
+    pooled = pool_for(traj, hidden, "assistant", "mean")
+    assert pooled.shape == (4,)
+    assert torch.allclose(pooled, hidden[3:7].mean(dim=0))
+
+
+def test_pool_for_rejects_role_with_multiple_spans():
+    from ruff_cm.llm.mask import TokenContext
+    from ruff_cm.llm.trajectory import Segment, Trajectory
+
+    segments = (
+        Segment(name="user_1", role="user", text="u1", char_span=(0, 2), token_span=(0, 1)),
+        Segment(name="assistant_1", role="assistant", text="a1", char_span=(2, 4), token_span=(1, 2)),
+        Segment(name="user_2", role="user", text="u2", char_span=(4, 6), token_span=(2, 3)),
+        Segment(name="assistant_2", role="assistant", text="a2", char_span=(6, 8), token_span=(3, 4)),
+    )
+    context = TokenContext(tokens=[1, 2, 3, 4], text="u1a1u2a2", char_offsets=[(0, 0)] * 4, spans={}, role_at=[None] * 4)
+    traj = Trajectory(text="u1a1u2a2", tokens=(1, 2, 3, 4), segments=segments, context=context)
+
+    hidden = torch.zeros(4, 2)
+    with pytest.raises(ValueError, match="multiple"):
+        pool_for(traj, hidden, "assistant", "mean")
+
+
+def test_pool_for_unknown_selector_raises():
+    from ruff_cm.llm.mask import TokenContext
+    from ruff_cm.llm.trajectory import Segment, Trajectory
+
+    segments = (
+        Segment(name="assistant_1", role="assistant", text="a", char_span=(0, 1), token_span=(0, 1)),
+    )
+    context = TokenContext(tokens=[1], text="a", char_offsets=[(0, 1)], spans={}, role_at=["assistant"])
+    traj = Trajectory(text="a", tokens=(1,), segments=segments, context=context)
+
+    hidden = torch.zeros(1, 2)
+    with pytest.raises(KeyError):
+        pool_for(traj, hidden, "nonexistent_segment", "mean")
