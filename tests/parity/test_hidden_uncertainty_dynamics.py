@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ruff_cm.llm.hooks import CaptureMode, CaptureSpec, HiddenCapture
+from ruff_cm.llm.extract_hiddens.capture import CaptureMode, CaptureSpec, HiddenCapture
 
 
 def last_token_hook_reference(model, input_ids, layer_idx):

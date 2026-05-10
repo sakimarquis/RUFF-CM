@@ -64,8 +64,10 @@ def append_benchmark_trials(
             rows = []
             for trial in trials:
                 row = _trial_row(trial)
-                row["stage"] = stage
-                row["epoch"] = epoch
+                if stage is not None:
+                    row["stage"] = stage
+                if epoch is not None:
+                    row["epoch"] = epoch
                 rows.append(row)
             append_trials(out_dir / f"{name}.jsonl", rows)
         return

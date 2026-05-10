@@ -18,7 +18,7 @@ from ruff_cm.llm.inference.thinking import (
 from ruff_cm.llm.families import identify_family
 from ruff_cm.llm.prompt.messages import to_chat_dicts
 
-from ..hooks import CaptureMode, HiddenCapture
+from ..extract_hiddens.capture import CaptureMode, HiddenCapture
 from .base import BackendCapabilityError, CaptureResult, ChoiceScores, GenerateResult, Message
 
 

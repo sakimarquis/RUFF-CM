@@ -6,7 +6,7 @@ from ruff_cm.llm.prompt.template import (
     detect_bos_prefix,
     locate_message,
 )
-from ruff_cm.llm.spans import assistant_header as span_assistant_header
+from ruff_cm.llm.prompt.template import assistant_header as span_assistant_header
 
 
 class TemplateTokenizer:

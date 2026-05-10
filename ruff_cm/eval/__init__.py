@@ -12,11 +12,25 @@ from .jsonl import (
     read_trials,
 )
 from .sampling import stratified_sample_hf
-from .trial import TRIAL_REQUIRED_FIELDS, Trial, add_generation_metadata, add_trial_metadata, make_sample_id, validate_trial
+from .trial import (
+    TRIAL_OPTIONAL_FIELDS,
+    TRIAL_REQUIRED_FIELDS,
+    Trial,
+    add_generation_metadata,
+    add_trial_metadata,
+    make_sample_id,
+    validate_trial,
+)
+from .verifier import StepResult, Verifier, VerifierRegistry, VerifierResult, step_row, summarize
 
 __all__ = [
+    "StepResult",
+    "TRIAL_OPTIONAL_FIELDS",
     "TRIAL_REQUIRED_FIELDS",
     "Trial",
+    "Verifier",
+    "VerifierRegistry",
+    "VerifierResult",
     "_safe_token_budget",
     "add_generation_metadata",
     "add_trial_metadata",
@@ -40,6 +54,8 @@ __all__ = [
     "run_mc_accuracy_benchmark",
     "run_partial_credit_benchmark",
     "short_answer_match",
+    "step_row",
     "stratified_sample_hf",
+    "summarize",
     "validate_trial",
 ]

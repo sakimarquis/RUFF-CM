@@ -1,11 +1,25 @@
 """Reusable LLM research primitives."""
 
 from . import extract_answer, extract_hiddens, families, inference, prompt, steering
-from .batch import JobManifest, RequestRecord, collect_ordered_results
 from .choice import ChoiceSet, VariantRule, build_letter_token_ids, compute_letter_log_probs
-from .execution import forward_hidden_only, forward_query_logits, forward_selected_logits
+from .extract_answer.parsing import (
+    coerce_llm_float,
+    extract_balanced_json,
+    from_choice_set,
+    looks_like_terminal_verdict,
+    parse_json_array_with_repair,
+    parse_json_with_repair,
+    strip_fences,
+    strip_thinking,
+    terminal_fragment,
+)
+from .extract_answer.terminal import TerminalFragment
+from .extract_hiddens.capture import CaptureMode, CaptureSpec, HiddenCapture
+from .extract_hiddens.locator import BoundaryPlan, find_subsequence, nonpad_last_positions, positions_from_spans, span_positions
 from .families import ModelFamily, all_families, identify_family
 from .inference import BudgetSpec, InferenceResult, SamplingConfig, ScoringSpec, generate as runtime_generate
+from .inference.batch import JobManifest, RequestRecord, collect_ordered_results
+from .inference.execution import forward_hidden_only, forward_query_logits, forward_selected_logits
 from .forward import (
     CaptureSpec as ForwardCaptureSpec,
     ForwardResult,
@@ -19,7 +33,6 @@ from .forward import (
     patch,
     subspace_subtract,
 )
-from .hooks import CaptureMode, CaptureSpec, HiddenCapture
 from .hooks_runtime import (
     HookMode,
     WriteHookContext,
@@ -27,18 +40,6 @@ from .hooks_runtime import (
     hidden_hooks_context,
     register_hidden_hooks,
     subspace_subtract_hook,
-)
-from .parsing import (
-    TerminalFragment,
-    coerce_llm_float,
-    extract_balanced_json,
-    from_choice_set,
-    looks_like_terminal_verdict,
-    parse_json_array_with_repair,
-    parse_json_with_repair,
-    strip_fences,
-    strip_thinking,
-    terminal_fragment,
 )
 from .mask import (
     TokenContext,
@@ -54,10 +55,10 @@ from .mask import (
     not_thinking,
     role,
 )
-from .reasoning import ThinkingConfig, resolve_thinking
+from .prompt.template import assistant_header, locate_message
+from .prompt.tokenize import build_token_context, find_subsequences, tokenize_with_loss_mask
+from ruff_cm.configs.thinking import ThinkingConfig, resolve_thinking
 from .steering import ActivationPatcher, NormMatchedSteer, SubspaceMeanSub, fit_subspace_basis
-from .locator import BoundaryPlan, find_subsequence, nonpad_last_positions, positions_from_spans, span_positions
-from .spans import assistant_header, build_token_context, find_subsequences, locate_message, tokenize_with_loss_mask
 from .trajectory import (
     Segment,
     TokenSpan,

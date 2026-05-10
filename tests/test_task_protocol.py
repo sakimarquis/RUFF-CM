@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ruff_cm.task_protocol import TaskProtocol
+from ruff_cm.configs.tasks import TaskProtocol
 
 
 def correct(answer: str, sample: dict) -> bool:

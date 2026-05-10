@@ -8,7 +8,7 @@ import pytest
 from ruff_cm.llm.backends.base import BackendCapabilityError, Message
 from ruff_cm.llm.backends.hf import HfBackend, _spec_with_non_pad_last_positions
 from ruff_cm.llm.choice import ChoiceSet
-from ruff_cm.llm.hooks import CaptureMode, CaptureSpec
+from ruff_cm.llm.extract_hiddens.capture import CaptureMode, CaptureSpec
 
 
 @pytest.fixture

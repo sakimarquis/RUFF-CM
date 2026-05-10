@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ruff_cm.llm.reasoning import ThinkingConfig, resolve_thinking
+from ruff_cm.configs.thinking import ThinkingConfig, resolve_thinking
 
 
 def alias_file(tmp_path: Path) -> Path:

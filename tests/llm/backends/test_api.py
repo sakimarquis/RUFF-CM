@@ -5,7 +5,7 @@ import pytest
 from ruff_cm.llm.backends.api import PROVIDERS, ApiBackend, ProviderConfig
 from ruff_cm.llm.backends.base import BackendCapabilityError, Message
 from ruff_cm.llm.choice import ChoiceSet
-from ruff_cm.llm.reasoning import ThinkingConfig
+from ruff_cm.configs.thinking import ThinkingConfig
 
 
 class FakeTokenizer:

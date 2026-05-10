@@ -22,8 +22,8 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 - `ruff_cm.metrics`: statistics, plotting, behavioral metrics, representation geometry, and probe classifiers.
 - `ruff_cm.eval`: benchmark trial schemas, JSONL persistence, driver loops, finalizers, and sampling/generation helpers.
 - `ruff_cm.store`: content-addressed artifact keys with sidecar metadata checks.
-- `ruff_cm.task_protocol`: lightweight task interfaces shared by downstream experiments.
-- `ruff_cm.logger`, `ruff_cm.plotter`, `ruff_cm.nn_helper`, `ruff_cm.slurm`, `ruff_cm.utils`: stable utility modules used by downstream projects.
+- `ruff_cm.configs`: lightweight task interfaces, thinking-mode config, and shared config loaders.
+- `ruff_cm.logger`, `ruff_cm.nn_helper`, `ruff_cm.slurm`, `ruff_cm.utils`: stable utility modules used by downstream projects.
 
 ## LLM Toolkit
 
@@ -37,25 +37,18 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 - `ruff_cm.llm`: `ChoiceSet`, `CaptureMode`, `CaptureSpec`, `HiddenCapture`, `ThinkingConfig`, `TokenSpan`, and
   `resolve_thinking`.
 - `ruff_cm.llm.inference`: composable `generate(...)` runtime specs, forward execution, KV-cache utilities,
-  latent-thought generation, thinking-runtime helpers, batch request scaffolding, and generation retry/parse drivers.
-- `ruff_cm.llm.execution`: `forward_hidden_only`, `forward_query_logits`, and `forward_selected_logits` for
-  query-position logits without forcing downstream code to materialize more tensor output than it needs.
-- `ruff_cm.llm.locator`: `BoundaryPlan` and token-position helpers for converting semantic boundaries into
-  capture/query positions.
+  query-position logits, latent-thought generation, thinking-runtime helpers, batch request scaffolding, and
+  generation retry/parse drivers.
 - `ruff_cm.llm.extract_hiddens`: hidden-capture types, read-only forward hooks, output-side probe positions,
-  hidden aggregation, and capture/hook/locator imports used by downstream projects.
-- `ruff_cm.llm.batch`: `RequestRecord`, `JobManifest`, and ordered result collection for provider batch adapters.
-- `ruff_cm.llm.spans`: prompt-span imports backed by `ruff_cm.llm.prompt` for `assistant_header`,
-  `locate_message`, `find_subsequences`, and `tokenize_with_loss_mask`.
+  hidden aggregation, and token-position helpers for converting semantic boundaries into capture/query positions.
 - `ruff_cm.llm.prompt`: `Message`, prompt composition helpers, chat-template introspection, and loss-mask
   tokenization helpers for chat-template-aware token span resolution.
 - `ruff_cm.llm.trajectory`: `Trajectory`, `Segment`, `TokenSpan`, and selector helpers for role, thinking,
   visible-step, terminal-answer, hidden-capture, and logit positions over one prompt+response.
 - `ruff_cm.llm.extract_answer`: choice scoring with token variants, free-form JSON repair, float coercion,
-  and terminal fixed-set answer extraction.
+  terminal fixed-set answer extraction, and terminal-fragment parsing.
 - `ruff_cm.llm.inference.thinking`: tokenizer-derived thinking protocols, HF close-budget processors,
   post-`</think>` logits capture, and two-stage API/HF thinking flows.
-- `ruff_cm.llm.parsing`: parsing imports backed by `ruff_cm.llm.extract_answer.parsing`.
 - `ruff_cm.llm.steering`: write-side forward hooks for subspace subtraction, norm-matched steering, and
   activation patching during inference.
 - `ruff_cm.llm.hooks_runtime`: forward-hook hidden capture, layerwise position extraction, write-hook mutation, and subspace subtraction helpers.
@@ -110,11 +103,39 @@ prompt/verifier frameworks, or analysis pipelines.
 `ruff_cm.eval` provides shared benchmark driver primitives without lifting domain-specific adapters:
 
 - `Trial`, `validate_trial`, and `make_sample_id` define the canonical per-sample JSONL schema.
+- Required trial fields are task-generic; generation metadata and SFT bookkeeping such as `stage` and `epoch`
+  remain optional.
 - `init_benchmark_trial_jsonls`, `append_benchmark_trials`, and `read_trials` persist one JSONL per benchmark.
 - `run_accuracy_benchmark`, `run_mc_accuracy_benchmark`, and `run_partial_credit_benchmark` run generic sampled loops.
 - `finalize_accuracy`, `finalize_f1`, and `finalize_partial_credit` summarize category stats.
 - `stratified_sample_hf`, `generate_text_with_budget`, `mc_answer`, `apply_chat`, `auto_max_chars`, and
   `short_answer_match` cover reusable benchmark plumbing.
+
+### CoT Verifier Registry
+
+`ruff_cm.eval.verifier` provides a step-level CoT verifier surface for research repos that build formal step
+verifiers per dataset:
+
+```python
+from ruff_cm.eval import StepResult, VerifierRegistry, step_row, summarize
+
+
+def verify_prontoqa(cot_text: str, problem: dict) -> "VerifierResult":
+    rows = []
+    for step_num, step_text in enumerate(cot_text.splitlines(), start=1):
+        error = check_step(step_text, problem)  # repo-specific
+        rows.append(step_row(step_num, error, verified=True))
+    return summarize(rows, optimal_steps=problem.get("n_hops"))
+
+
+registry = VerifierRegistry()
+registry.register("prontoqa", verify_prontoqa)
+```
+
+Verifier results round-trip through `as_dict` / `from_dict` so existing JSON artifacts produced by the same schema
+(for example, `uncertainty_dynamics.verifier`) load straight back into `VerifierResult`.
+
+ruff-cm ships no task-specific verifiers; downstream repos own those.
 
 Install `.[eval]` when a downstream benchmark adapter needs Hugging Face `datasets`.
 
@@ -175,10 +196,32 @@ assert path == Path("artifacts/scores/qwen3-4b.bin")
 assert key.fingerprinted_path(Path("artifacts"), ext=".bin").name == f"{key.fingerprint()}.bin"
 ```
 
-## Plotter Helpers
+### Seed-Namespace Identity
+
+`derive_seed` and `seed_namespace_metadata` build deterministic child seeds and fold them into
+`ArtifactKey.identity_fields` so multi-phase caches stay correct across naming refactors:
+
+```python
+from ruff_cm.store import ArtifactKey, derive_seed, seed_namespace_metadata
+
+root = 42
+metadata = seed_namespace_metadata(
+    root,
+    namespaces={
+        "train_seed": ("prontoqa", "generate", "train_gen"),
+        "test_seed": ("prontoqa", "generate", "test_gen"),
+    },
+    extras={"experiment_seed": root, "model_name": "qwen3-4b"},
+)
+key = ArtifactKey("hidden", ("qwen3-4b", "prontoqa"), metadata)
+```
+
+`seed_everything(seed)` seeds Python's `random`, NumPy, and Torch, including CUDA/MPS when available. Call it at
+experiment boundaries with a seed generated by `derive_seed`.
+
+## Plotting Helpers
 
 `ruff_cm.metrics.plotting` provides matplotlib styling and plot templates shared by downstream repos.
-`ruff_cm.plotter` re-exports the same helpers:
 
 - `set_mpl(size=8)` — publication defaults (Arial, no top/right spines, dpi=600).
 - `save_fig(fig, path, fmt=None, dpi=300)` — tight-layout save + close.
@@ -190,7 +233,6 @@ assert key.fingerprinted_path(Path("artifacts"), ext=".bin").name == f"{key.fing
 ## Stats Helpers
 
 `ruff_cm.metrics.stats` provides small statistical helpers for analysis and plotting.
-`ruff_cm.stats` re-exports the same helpers:
 
 - `format_pvalue(p, italic=False)` formats p-values using common reporting thresholds and LaTeX for very small values.
 - `mean_sem(data)` stacks per-key arrays and returns nan-aware mean and SEM dictionaries.

@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from ruff_cm.eval import TRIAL_REQUIRED_FIELDS, Trial, make_sample_id, validate_trial
+from ruff_cm.eval import TRIAL_OPTIONAL_FIELDS, TRIAL_REQUIRED_FIELDS, Trial, make_sample_id, validate_trial
 
 
 def test_trial_constructor_validates_plan_acceptance_shape():
     trial = Trial(
-        stage="test",
-        epoch=0,
         sample_id="s1",
         response="A",
         pred="A",
@@ -50,3 +48,27 @@ def test_validate_trial_keeps_pr_required_field_contract():
     del row["gold"]
     with pytest.raises(ValueError, match="missing required fields"):
         validate_trial(row)
+
+
+def test_trial_preserves_optional_eval_metadata_when_present():
+    row = Trial(
+        benchmark="bench",
+        sample_id="bench:cat:0",
+        category="cat",
+        response="A",
+        pred="A",
+        gold="B",
+        correct=False,
+        score=None,
+        n_tokens=1,
+        truncated=False,
+        prompt_truncated_to=12,
+        max_new_tokens=5,
+        stage=0,
+        epoch=1.0,
+        source={"type": "fixture", "row_idx": 7},
+        extra={},
+    ).to_dict()
+
+    assert tuple(row) == TRIAL_REQUIRED_FIELDS + TRIAL_OPTIONAL_FIELDS
+    validate_trial(row)

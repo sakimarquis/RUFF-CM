@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ruff_cm.llm.execution import forward_hidden_only, forward_query_logits, forward_selected_logits
+from ruff_cm.llm.inference.execution import forward_hidden_only, forward_query_logits, forward_selected_logits
 
 
 def tiny_causal_model(torch):

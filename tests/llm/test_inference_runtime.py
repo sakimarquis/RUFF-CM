@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from ruff_cm.llm.backends.base import BackendCapabilityError, CaptureResult, GenerateResult, Message
-from ruff_cm.llm.capture import CaptureMode, CaptureSpec
+from ruff_cm.llm.extract_hiddens.capture import CaptureMode, CaptureSpec
 from ruff_cm.llm.choice import ChoiceSet
 from ruff_cm.llm.families import ModelFamily, PostMarkerTerminal
 from ruff_cm.llm.inference import BudgetSpec, SamplingConfig, ScoringSpec, generate

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ruff_cm.llm.locator import (
+from ruff_cm.llm.extract_hiddens.locator import (
     BoundaryPlan,
     find_subsequence,
     nonpad_last_positions,

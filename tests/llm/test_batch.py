@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ruff_cm.llm.batch import JobManifest, RequestRecord, collect_ordered_results
+from ruff_cm.llm.inference.batch import JobManifest, RequestRecord, collect_ordered_results
 
 
 def test_job_manifest_round_trips_json(tmp_path):

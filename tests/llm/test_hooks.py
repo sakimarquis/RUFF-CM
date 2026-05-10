@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 from ruff_cm.llm.backends.base import CaptureResult
-from ruff_cm.llm.hooks import CaptureMode, CaptureSpec, HiddenCapture, UnsupportedArchitectureError
+from ruff_cm.llm.extract_hiddens.capture import CaptureMode, CaptureSpec, HiddenCapture
+from ruff_cm.llm.extract_hiddens.hooks import UnsupportedArchitectureError
 
 
 def test_capture_spec_defaults():

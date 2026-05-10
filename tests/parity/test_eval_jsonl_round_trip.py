@@ -5,8 +5,6 @@ from ruff_cm.eval import Trial, append_benchmark_trials, init_benchmark_trial_js
 
 def _trial() -> Trial:
     return Trial(
-        stage="test",
-        epoch=0,
         sample_id="s1",
         response="A",
         pred="A",

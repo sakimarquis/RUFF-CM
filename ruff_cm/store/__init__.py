@@ -32,6 +32,7 @@ from ruff_cm.store.prefix_cache import (
     reconstruct_trajectory,
     serialize_prefix_cache,
 )
+from ruff_cm.store.seeds import derive_seed, seed_everything, seed_namespace_metadata
 
 __all__ = [
     "Artifact",
@@ -48,6 +49,7 @@ __all__ = [
     "PrefixCacheCodec",
     "StaleArtifactError",
     "StaleCacheError",
+    "derive_seed",
     "is_fresh",
     "load_prefix_cache",
     "manifest_path",
@@ -61,6 +63,8 @@ __all__ = [
     "read_cache_metadata",
     "reconstruct_trajectory",
     "require_cache_metadata",
+    "seed_everything",
+    "seed_namespace_metadata",
     "serialize_prefix_cache",
     "write",
     "write_artifact",

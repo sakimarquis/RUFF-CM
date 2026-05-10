@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from ruff_cm.llm import HookMode
-from ruff_cm.llm.hooks import UnsupportedArchitectureError
+from ruff_cm.llm.extract_hiddens.hooks import UnsupportedArchitectureError
 from ruff_cm.llm.hooks_runtime import (
     WriteHookContext,
     extract_layerwise_at_positions,

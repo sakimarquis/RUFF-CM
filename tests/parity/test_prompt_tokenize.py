@@ -2,8 +2,8 @@ import numpy as np
 
 from ruff_cm.llm.backends import Message
 from ruff_cm.llm.prompt.tokenize import find_subsequences, tokenize_with_loss_mask
-from ruff_cm.llm.spans import find_subsequences as span_find_subsequences
-from ruff_cm.llm.spans import tokenize_with_loss_mask as span_tokenize_with_loss_mask
+from ruff_cm.llm.prompt.tokenize import find_subsequences as span_find_subsequences
+from ruff_cm.llm.prompt.tokenize import tokenize_with_loss_mask as span_tokenize_with_loss_mask
 
 
 class MaskTokenizer:

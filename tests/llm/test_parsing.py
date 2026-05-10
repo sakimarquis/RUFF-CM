@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from ruff_cm.llm.parsing import (
-    TerminalFragment,
+from ruff_cm.llm.extract_answer.parsing import (
     extract_balanced_json,
     from_choice_set,
     looks_like_terminal_verdict,
@@ -9,6 +8,7 @@ from ruff_cm.llm.parsing import (
     parse_json_with_repair,
     terminal_fragment,
 )
+from ruff_cm.llm.extract_answer.terminal import TerminalFragment
 
 
 def test_from_choice_set_matches_word_boundary_and_preserves_candidate_case():

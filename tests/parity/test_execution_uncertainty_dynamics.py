@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ruff_cm.llm.execution import forward_selected_logits
+from ruff_cm.llm.inference.execution import forward_selected_logits
 
 
 def test_selected_logits_match_dense_uncertainty_dynamics_fixture():

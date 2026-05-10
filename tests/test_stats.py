@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from ruff_cm import stats
+from ruff_cm.metrics import stats
 
 
 def test_format_pvalue_thresholds():
@@ -56,7 +56,7 @@ def test_smooth_curve_ci_computes_group_ci_and_centered_rolling_mean():
     np.testing.assert_allclose(curve["ci_hi"], np.array([3.0, 4.0, 6.0, 7.0]) + margin)
 
 
-def test_top_level_import_keeps_stats_dependencies_lazy():
+def test_metrics_stats_import_keeps_dependencies_lazy():
     code = """
 import sys
 import ruff_cm
@@ -64,9 +64,9 @@ import ruff_cm
 assert "scipy" not in sys.modules
 assert "pandas" not in sys.modules
 
-from ruff_cm import stats
+from ruff_cm.metrics import stats
 
-assert stats.__name__ == "ruff_cm.stats"
+assert stats.__name__ == "ruff_cm.metrics.stats"
 """
 
     subprocess.run([sys.executable, "-c", code], check=True)

@@ -4,7 +4,7 @@ import pytest
 
 from ruff_cm.llm.backends.base import Message
 from ruff_cm.llm.backends.providers import lower_chat_request, resolve_provider_config
-from ruff_cm.llm.reasoning import ThinkingConfig
+from ruff_cm.configs.thinking import ThinkingConfig
 
 
 def disabled_thinking():
