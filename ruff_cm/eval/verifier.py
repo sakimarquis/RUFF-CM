@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any
+from typing import Any, Protocol
 
-__all__ = ["StepResult", "VerifierResult", "step_row", "summarize"]
+__all__ = ["StepResult", "Verifier", "VerifierRegistry", "VerifierResult", "step_row", "summarize"]
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,37 @@ class VerifierResult:
     def __post_init__(self) -> None:
         object.__setattr__(self, "steps", tuple(self.steps))
         object.__setattr__(self, "extras", MappingProxyType(dict(self.extras)))
+
+
+class Verifier(Protocol):
+    """Callable protocol for dataset-owned CoT verifiers."""
+
+    def __call__(self, cot_text: str, problem: Mapping[str, Any]) -> VerifierResult: ...
+
+
+class VerifierRegistry:
+    """Pluggable per-dataset verifier registry."""
+
+    def __init__(self) -> None:
+        self._verifiers: dict[str, Verifier] = {}
+
+    def register(self, name: str, verifier: Verifier) -> None:
+        key = str(name)
+        if key in self._verifiers:
+            raise ValueError(f"verifier '{key}' already registered")
+        self._verifiers[key] = verifier
+
+    def get(self, name: str) -> Verifier:
+        key = str(name)
+        if key not in self._verifiers:
+            raise KeyError(f"verifier '{key}' not registered; known: {sorted(self._verifiers)}")
+        return self._verifiers[key]
+
+    def __contains__(self, name: object) -> bool:
+        return name in self._verifiers
+
+    def names(self) -> tuple[str, ...]:
+        return tuple(sorted(self._verifiers))
 
 
 def step_row(step_num: int, error_description: str | None, *, verified: bool) -> StepResult:
