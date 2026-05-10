@@ -25,6 +25,51 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 - `ruff_cm.configs`: lightweight task interfaces, thinking-mode config, and shared config loaders.
 - `ruff_cm.logger`, `ruff_cm.nn_helper`, `ruff_cm.slurm`, `ruff_cm.utils`: stable utility modules used by downstream projects.
 
+## Pipeline Orchestration
+
+`ruff_cm.pipeline` provides two small primitives for orchestrated LLM workflows:
+
+- `Callback` + `CallbackChain` for per-LLM-call lifecycle hooks (`augment`, `on_response`, `on_finish`).
+  State is a plain dict shared across hooks; the chain dispatches in declaration order.
+- `Stage` + `Pipeline` for multi-phase experiment runs with banner logging and per-stage enabled predicates.
+
+```python
+from ruff_cm.pipeline import Callback, CallbackChain, Pipeline, Stage
+
+
+class LegalActions(Callback):
+    name = "legal_actions"
+
+    def augment(self, state):
+        return f"Legal actions: {', '.join(state['legal_actions'])}"
+
+
+class TrajectoryRecorder(Callback):
+    def on_response(self, state, response):
+        state.setdefault("history", []).append(response)
+
+
+chain = CallbackChain([LegalActions(), TrajectoryRecorder()])
+state = {"legal_actions": ["play", "discard"], "history": []}
+prompt_parts = chain.augment(state)
+# ... run LLM with prompt_parts joined into the prompt ...
+chain.on_response(state, "play card 1")
+
+
+pipe = Pipeline(
+    [
+        Stage(name="generate", run=run_generate),
+        Stage(name="verifier", run=run_verifier, enabled=lambda ctx: ctx["verifier_on"]),
+        Stage(name="train_probe", run=run_train),
+        Stage(name="analysis", run=run_analysis),
+    ]
+)
+pipe.run({"verifier_on": True})
+```
+
+ruff-cm itself ships no introspection-based feature flagging, such as "enable hidden capture if any callback is
+named 'emotion_*'"; compose that in your own bootstrap when you have a concrete need.
+
 ## LLM Toolkit
 
 `ruff_cm.llm` provides small primitives shared by LLM research repos:
