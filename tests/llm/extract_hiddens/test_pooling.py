@@ -2,7 +2,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from ruff_cm.llm.extract_hiddens.pooling import pool_span, pool_spans
+from ruff_cm.llm.extract_hiddens.pooling import pool_layered, pool_span, pool_spans
 from ruff_cm.llm.trajectory import TokenSpan
 
 
@@ -90,3 +90,20 @@ def test_pool_spans_empty_input_raises():
     hidden = torch.zeros(5, 2)
     with pytest.raises(ValueError):
         pool_spans(hidden, [], "mean")
+
+
+def test_pool_layered_applies_pool_per_layer():
+    layers = {
+        0: torch.arange(10, dtype=torch.float32).view(5, 2),
+        4: torch.arange(10, 20, dtype=torch.float32).view(5, 2),
+    }
+    pooled = pool_layered(layers, TokenSpan(1, 4), "mean")
+    assert set(pooled) == {0, 4}
+    assert torch.allclose(pooled[0], layers[0][1:4].mean(dim=0))
+    assert torch.allclose(pooled[4], layers[4][1:4].mean(dim=0))
+
+
+def test_pool_layered_preserves_layer_keys():
+    layers = {3: torch.zeros(4, 2), 7: torch.zeros(4, 2)}
+    pooled = pool_layered(layers, TokenSpan(0, 2), "first")
+    assert sorted(pooled) == [3, 7]

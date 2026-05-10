@@ -48,6 +48,13 @@ def pool_spans(hidden, spans: Sequence["TokenSpan | tuple[int, int]"], mode: Poo
     return torch.stack(pooled, dim=0)
 
 
+def pool_layered(
+    layer_hiddens: Mapping[int, "torch.Tensor"], span: "TokenSpan | tuple[int, int]", mode: PoolMode
+) -> dict[int, "torch.Tensor"]:
+    """Apply pool_span to every layer in a HiddenCapture-style dict."""
+    return {layer: pool_span(hidden, span, mode) for layer, hidden in layer_hiddens.items()}
+
+
 def _mean_pool_dtype_safe(hidden):
     """Mean over the second-to-last dim with fp32 accumulation, restoring dtype."""
     import torch
