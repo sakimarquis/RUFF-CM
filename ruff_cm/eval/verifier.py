@@ -17,6 +17,23 @@ class StepResult:
     error_description: str | None
     verified: bool
 
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "step_num": self.step_num,
+            "has_local_error": self.has_local_error,
+            "error_description": self.error_description,
+            "verified": self.verified,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> StepResult:
+        return cls(
+            step_num=int(payload["step_num"]),
+            has_local_error=bool(payload["has_local_error"]),
+            error_description=payload["error_description"],
+            verified=bool(payload["verified"]),
+        )
+
 
 @dataclass(frozen=True)
 class VerifierResult:
@@ -29,6 +46,27 @@ class VerifierResult:
     def __post_init__(self) -> None:
         object.__setattr__(self, "steps", tuple(self.steps))
         object.__setattr__(self, "extras", MappingProxyType(dict(self.extras)))
+
+    def as_dict(self) -> dict[str, Any]:
+        out = {
+            "steps": [row.as_dict() for row in self.steps],
+            "optimal_steps": self.optimal_steps,
+            "actual_steps": self.actual_steps,
+        }
+        out.update(self.extras)
+        out["excess_steps"] = self.excess_steps
+        return out
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> VerifierResult:
+        reserved = {"steps", "optimal_steps", "actual_steps", "excess_steps"}
+        return cls(
+            steps=tuple(StepResult.from_dict(row) for row in payload["steps"]),
+            optimal_steps=payload.get("optimal_steps"),
+            actual_steps=int(payload["actual_steps"]),
+            excess_steps=payload.get("excess_steps"),
+            extras={key: value for key, value in payload.items() if key not in reserved},
+        )
 
 
 class Verifier(Protocol):

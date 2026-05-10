@@ -1,3 +1,5 @@
+from types import MappingProxyType
+
 import pytest
 
 from ruff_cm.eval.verifier import StepResult, Verifier, VerifierRegistry, VerifierResult, step_row, summarize
@@ -113,3 +115,51 @@ def test_verifier_protocol_call_round_trip():
     assert isinstance(result, VerifierResult)
     assert result.actual_steps == 2
     assert result.excess_steps == 0
+
+
+def test_step_result_round_trips_through_dict():
+    row = step_row(5, "bad rule", verified=True)
+    payload = row.as_dict()
+    assert payload == {
+        "step_num": 5,
+        "has_local_error": True,
+        "error_description": "bad rule",
+        "verified": True,
+    }
+    restored = StepResult.from_dict(payload)
+    assert restored == row
+
+
+def test_verifier_result_round_trips_through_dict():
+    rows = (step_row(1, None, verified=True), step_row(2, "x", verified=True))
+    result = summarize(rows, optimal_steps=2, dataset="prontoqa")
+
+    payload = result.as_dict()
+    assert payload["optimal_steps"] == 2
+    assert payload["actual_steps"] == 2
+    assert payload["excess_steps"] == 0
+    assert payload["dataset"] == "prontoqa"
+    assert payload["steps"][0]["step_num"] == 1
+    assert payload["steps"][1]["error_description"] == "x"
+
+    restored = VerifierResult.from_dict(payload)
+    assert restored.steps == rows
+    assert restored.optimal_steps == 2
+    assert restored.extras["dataset"] == "prontoqa"
+
+
+def test_verifier_result_from_dict_tolerates_existing_uncertainty_dynamics_payloads():
+    payload = {
+        "steps": [
+            {"step_num": 1, "has_local_error": False, "error_description": None, "verified": True},
+            {"step_num": 2, "has_local_error": True, "error_description": "bad", "verified": True},
+        ],
+        "optimal_steps": 2,
+        "actual_steps": 2,
+        "excess_steps": 0,
+    }
+    result = VerifierResult.from_dict(payload)
+    assert result.steps[0].step_num == 1
+    assert result.steps[1].error_description == "bad"
+    assert result.actual_steps == 2
+    assert result.extras == MappingProxyType({})
