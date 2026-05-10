@@ -21,3 +21,12 @@ def banner(title: str, *, log: Callable[[str], None] = print) -> None:
     log(_BANNER_RULE)
     log(title)
     log(_BANNER_RULE)
+
+
+@dataclass(frozen=True)
+class Stage:
+    """One named pipeline phase: a callable plus an optional enabled predicate."""
+
+    name: str
+    run: Callable[[MutableMapping[str, Any]], None]
+    enabled: Callable[[Mapping[str, Any]], bool] = field(default=lambda ctx: True)
