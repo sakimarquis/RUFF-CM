@@ -56,11 +56,11 @@ def test_generate_latent_thoughts_returns_tail_only_rebased_result():
 
         def forward(self, inputs_embeds, attention_mask, past_key_values, use_cache=True, output_hidden_states=True):
             del attention_mask, use_cache, output_hidden_states
-            old_key, old_value = past_key_values[0]
-            next_pos = old_key.shape[2]
+            cached_key, cached_value = past_key_values[0]
+            next_pos = cached_key.shape[2]
             new_key = torch.tensor([[[[float(next_pos)]]]])
             new_value = torch.tensor([[[[float(next_pos + 100)]]]])
-            past_key_values = ((torch.cat([old_key, new_key], dim=2), torch.cat([old_value, new_value], dim=2)),)
+            past_key_values = ((torch.cat([cached_key, new_key], dim=2), torch.cat([cached_value, new_value], dim=2)),)
             hidden = inputs_embeds + 1.0
             return type("Output", (), {"past_key_values": past_key_values, "hidden_states": (hidden,)})
 
@@ -92,9 +92,9 @@ def test_generate_latent_thoughts_preserves_hb_cache_return_by_default():
 
         def forward(self, inputs_embeds, attention_mask, past_key_values, use_cache=True, output_hidden_states=True):
             del attention_mask, use_cache, output_hidden_states
-            old_key, old_value = past_key_values[0]
+            cached_key, cached_value = past_key_values[0]
             new_key = torch.zeros(1, 1, 1, 1)
-            past_key_values = ((torch.cat([old_key, new_key], dim=2), torch.cat([old_value, new_key], dim=2)),)
+            past_key_values = ((torch.cat([cached_key, new_key], dim=2), torch.cat([cached_value, new_key], dim=2)),)
             return type("Output", (), {"past_key_values": past_key_values, "hidden_states": (inputs_embeds,)})
 
     cache = ((torch.zeros(1, 1, 1, 1), torch.zeros(1, 1, 1, 1)),)

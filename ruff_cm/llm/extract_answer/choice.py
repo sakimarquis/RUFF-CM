@@ -150,7 +150,7 @@ class ChoiceSet:
         if all(isinstance(variant, VariantRule) for variant in self._variants):
             variant_texts = _render_with_rules(candidate, list(self._variants))
         else:
-            variant_texts = [self._apply_legacy_variant(candidate, variant) for variant in self._variants]
+            variant_texts = [self._apply_string_variant(candidate, variant) for variant in self._variants]
 
         rendered: list[str] = []
         for variant_text in variant_texts:
@@ -160,9 +160,9 @@ class ChoiceSet:
                     rendered.append(decorated)
         return rendered
 
-    def _apply_legacy_variant(self, candidate: str, variant: str | VariantRule) -> str:
+    def _apply_string_variant(self, candidate: str, variant: str | VariantRule) -> str:
         if isinstance(variant, VariantRule):
-            raise ValueError("cannot mix VariantRule instances with legacy string variants")
+            raise ValueError("cannot mix VariantRule instances with string variants")
         match variant:
             case "raw":
                 return candidate

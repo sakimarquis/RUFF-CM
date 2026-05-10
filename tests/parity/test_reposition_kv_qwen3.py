@@ -19,12 +19,14 @@ def test_reposition_kv_qwen3_matches_fresh_forward_after_rebase():
 
     input_ids = tokenizer("A B C D", return_tensors="pt").input_ids[:, :4]
     next_id = tokenizer(" E", return_tensors="pt", add_special_tokens=False).input_ids[:, :1]
-    old_start_pos = 10
-    old_position_ids = torch.arange(old_start_pos, old_start_pos + input_ids.shape[1]).unsqueeze(0)
+    cached_start_pos = 10
+    cached_position_ids = torch.arange(cached_start_pos, cached_start_pos + input_ids.shape[1]).unsqueeze(0)
 
     with torch.no_grad():
-        old_outputs = model(input_ids=input_ids, position_ids=old_position_ids, use_cache=True)
-        rebased_kv = reposition_kv(model, old_outputs.past_key_values, old_start_pos=old_start_pos, m=input_ids.shape[1])
+        cached_outputs = model(input_ids=input_ids, position_ids=cached_position_ids, use_cache=True)
+        rebased_kv = reposition_kv(
+            model, cached_outputs.past_key_values, old_start_pos=cached_start_pos, m=input_ids.shape[1]
+        )
         rebased_outputs = model(
             input_ids=next_id,
             attention_mask=torch.ones(1, input_ids.shape[1] + 1, dtype=torch.long),

@@ -4,6 +4,8 @@ from dataclasses import dataclass, replace
 import inspect
 from typing import Any, Sequence
 
+import torch
+
 from ruff_cm.llm.backends.base import BackendCapabilityError, CaptureResult, ChoiceScores, GenerateResult, Message
 from ruff_cm.llm.extract_hiddens.capture import CaptureMode, CaptureSpec
 from ruff_cm.llm.families import identify_family
@@ -102,8 +104,8 @@ def _call_generate(
         if _accepts_kwarg(backend.generate, "budget_processor"):
             kwargs["budget_processor"] = budget.budget_processor_for(family)
 
-    # Older backends keep thinking mode as instance state, so scope any runtime override to this call.
-    old_enable_thinking = getattr(backend, "enable_thinking", None)
+    # Scope instance-state thinking overrides to this call.
+    previous_enable_thinking = getattr(backend, "enable_thinking", None)
     should_toggle = hasattr(backend, "enable_thinking") and (thinking is not None or budget is not None)
     if should_toggle:
         backend.enable_thinking = bool(getattr(thinking, "enable_thinking", True))
@@ -111,7 +113,7 @@ def _call_generate(
         return backend.generate(messages, **kwargs)
     finally:
         if should_toggle:
-            backend.enable_thinking = old_enable_thinking
+            backend.enable_thinking = previous_enable_thinking
 
 
 def _runtime_capture_spec(
@@ -180,7 +182,6 @@ def _subset_capture_result(
 def _select_position_axis(tensor: Any, indices: list[int]) -> Any:
     if not indices:
         return tensor[:, :0] if getattr(tensor, "ndim", 0) >= 2 else tensor
-    torch = __import__("torch")
     index = torch.tensor(indices, device=tensor.device, dtype=torch.long)
     return tensor.index_select(dim=1, index=index)
 

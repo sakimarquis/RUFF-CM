@@ -4,8 +4,11 @@ import asyncio
 import math
 import os
 import subprocess
-import time
 from typing import Any
+
+import torch
+
+from ruff_cm.llm.scoring.token_labels import strip_bpe_prefix
 
 from .policy import (
     api_run_policy,
@@ -18,8 +21,6 @@ from .policy import (
     immediate_service_tier,
     should_use_batch,
 )
-from ruff_cm.llm.scoring.token_labels import strip_bpe_prefix
-
 from .adapters import AnthropicVertexAdapter, GoogleGeminiAdapter, OpenAIAdapter
 from .adapters.openai import maybe_await
 from .base import BackendCapabilityError, ChoiceScores, GenerateResult, Message
@@ -196,14 +197,12 @@ class ApiBackend:
         thinking_budget: int | None = None,
     ) -> tuple[Any, int]:
         if not messages_list:
-            torch = __import__("torch")
             return torch.tensor([]), 0
         first = await self._score_one_binary(messages_list[0], thinking_budget=thinking_budget)
         rest = await asyncio.gather(
             *[self._score_one_binary(messages, thinking_budget=thinking_budget) for messages in messages_list[1:]]
         )
         results = [first, *rest]
-        torch = __import__("torch")
         return torch.tensor([score for score, _ in results]), sum(fallback for _, fallback in results)
 
     def score_binary_sync(
@@ -222,7 +221,6 @@ class ApiBackend:
         thinking_budget: int | None = None,
     ) -> tuple[Any, int]:
         if not messages_list:
-            torch = __import__("torch")
             return torch.tensor([]), 0
         thinking_message = await self._shared_thinking_message(thinking_messages, self._effective_thinking_budget(thinking_budget))
         continued = _continued_messages(thinking_messages, thinking_message, messages_list)
@@ -306,16 +304,6 @@ class ApiBackend:
         if self.provider == "anthropic_vertex":
             return AnthropicVertexAdapter(self)
         return OpenAIAdapter(self)
-
-    def _call_chat(self, body: dict[str, Any]):
-        delays = (1, 2, 4)[: self.max_retries]
-        for delay in (*delays, None):
-            try:
-                return self.client.chat.completions.create(**body)
-            except Exception as exc:
-                if type(exc).__name__ not in _RETRYABLE_ERROR_NAMES or delay is None:
-                    raise
-                time.sleep(delay)
 
     async def _call_chat_async(self, body: dict[str, Any]) -> Any:
         delays = (1, 2, 4)[: self.max_retries]
@@ -467,7 +455,6 @@ class ApiBackend:
 
     async def _score_binary_after_shared_thinking(self, continued_messages: list[list[Message]]):
         results = await asyncio.gather(*[self._score_one_answer_only(messages) for messages in continued_messages])
-        torch = __import__("torch")
         return torch.tensor([score for score, _ in results]), sum(fallback for _, fallback in results)
 
     async def _shared_thinking_message(self, messages: list[Message], thinking_budget: int) -> Message:

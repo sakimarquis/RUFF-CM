@@ -46,22 +46,22 @@ def hb_reference_reposition(torch, key, cos_old, sin_old, cos_new, sin_new):
 def test_reposition_kv_matches_split_half_reference_byte_for_byte():
     torch = pytest.importorskip("torch")
     model = RotaryModel(torch, rotary_dim=4)
-    old_start_pos = 5
+    cached_start_pos = 5
     seq_len = 3
 
     base_rotary = torch.arange(1, 13, dtype=torch.float32).view(1, 1, seq_len, 4) / 10
     passthrough = torch.arange(20, 26, dtype=torch.float32).view(1, 1, seq_len, 2) / 10
     value = torch.arange(30, 48, dtype=torch.float32).view(1, 1, seq_len, 6) / 10
 
-    old_pos = torch.arange(old_start_pos, old_start_pos + seq_len).unsqueeze(0)
+    cached_pos = torch.arange(cached_start_pos, cached_start_pos + seq_len).unsqueeze(0)
     new_pos = torch.arange(seq_len).unsqueeze(0)
-    cos_old, sin_old = model.model.rotary_emb(torch.zeros(1), old_pos)
+    cos_old, sin_old = model.model.rotary_emb(torch.zeros(1), cached_pos)
     cos_new, sin_new = model.model.rotary_emb(torch.zeros(1), new_pos)
 
-    old_key = torch.cat([apply_split_rope(torch, base_rotary, cos_old, sin_old), passthrough], dim=-1)
-    expected_key = hb_reference_reposition(torch, old_key, cos_old, sin_old, cos_new, sin_new)
+    cached_key = torch.cat([apply_split_rope(torch, base_rotary, cos_old, sin_old), passthrough], dim=-1)
+    expected_key = hb_reference_reposition(torch, cached_key, cos_old, sin_old, cos_new, sin_new)
 
-    repositioned = reposition_kv(model, ((old_key, value),), old_start_pos=old_start_pos, m=seq_len)
+    repositioned = reposition_kv(model, ((cached_key, value),), old_start_pos=cached_start_pos, m=seq_len)
 
     torch.testing.assert_close(repositioned[0][0], expected_key, rtol=0, atol=0)
     assert torch.equal(repositioned[0][1], value)

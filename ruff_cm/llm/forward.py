@@ -215,7 +215,7 @@ def _call_model_forward(
     forward_kwargs: dict[str, Any],
 ) -> Any:
     if kv_cache is not None:
-        # Keep this local: importing inference.kvcache at module load enters inference.__init__, which imports forward.
+        # Local import avoids the forward <-> inference package cycle.
         from ruff_cm.llm.inference.kvcache import forward_with_kv_delta
 
         return forward_with_kv_delta(
@@ -439,7 +439,7 @@ def _forward_window(model: Any, input_ids: torch.Tensor, kv_cache: Any | None) -
     if kv_cache is None or _is_hybrid_linear_attention(model):
         return 0, int(input_ids.shape[1])
 
-    # Keep this local for the same import cycle as _call_model_forward.
+    # Local import avoids the forward <-> inference package cycle.
     from ruff_cm.llm.inference.kvcache import kv_seq_len
 
     cache_len = kv_seq_len(kv_cache)

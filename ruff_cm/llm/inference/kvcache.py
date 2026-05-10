@@ -20,8 +20,8 @@ def to_legacy_kv(cache: Any) -> tuple:
 def kv_seq_len(cache: Any) -> int:
     if hasattr(cache, "get_seq_length"):
         return int(cache.get_seq_length())
-    legacy = to_legacy_kv(cache)
-    return int(legacy[0][0].shape[2])
+    kv_tuple = to_legacy_kv(cache)
+    return int(kv_tuple[0][0].shape[2])
 
 
 def truncate_kv(cache: Any, length: int) -> Any:
@@ -61,13 +61,13 @@ def concat_kv(a: Any, b: Any | None = None) -> Any:
             for idx in range(len(first.value_cache))
         ]
         return combined
-    legacy_caches = [to_legacy_kv(cache) for cache in caches]
+    tuple_caches = [to_legacy_kv(cache) for cache in caches]
     return tuple(
         (
-            _concat_tensors([cache[layer][0] for cache in legacy_caches]),
-            _concat_tensors([cache[layer][1] for cache in legacy_caches]),
+            _concat_tensors([cache[layer][0] for cache in tuple_caches]),
+            _concat_tensors([cache[layer][1] for cache in tuple_caches]),
         )
-        for layer in range(len(legacy_caches[0]))
+        for layer in range(len(tuple_caches[0]))
     )
 
 
@@ -84,15 +84,15 @@ def clone_kv(cache: Any) -> Any:
     return tuple((_clone_value(k), _clone_value(v)) for k, v in to_legacy_kv(cache))
 
 
-def to_dynamic_cache(legacy_or_dyn: Any) -> Any:
-    if _is_native_cache(legacy_or_dyn) and hasattr(legacy_or_dyn, "update"):
-        return legacy_or_dyn
+def to_dynamic_cache(cache: Any) -> Any:
+    if _is_native_cache(cache) and hasattr(cache, "update"):
+        return cache
     from transformers import DynamicCache
 
-    if isinstance(legacy_or_dyn, DynamicCache):
-        return legacy_or_dyn
+    if isinstance(cache, DynamicCache):
+        return cache
     dynamic = DynamicCache()
-    for layer_idx, (key, value) in enumerate(to_legacy_kv(legacy_or_dyn)):
+    for layer_idx, (key, value) in enumerate(to_legacy_kv(cache)):
         dynamic.update(key, value, layer_idx)
     return dynamic
 
@@ -105,10 +105,10 @@ def reposition_kv(model: Any, cache: Any, old_start_pos: int, m: int) -> Any:
         return cache
     param = next(model.parameters())
 
-    old_pos = torch.arange(old_start_pos, old_start_pos + m, device=param.device).unsqueeze(0)
+    source_pos = torch.arange(old_start_pos, old_start_pos + m, device=param.device).unsqueeze(0)
     new_pos = torch.arange(m, device=param.device).unsqueeze(0)
     dummy = torch.zeros(1, device=param.device, dtype=param.dtype)
-    cos_old, sin_old = rotary_emb(dummy, old_pos)
+    cos_old, sin_old = rotary_emb(dummy, source_pos)
     cos_new, sin_new = rotary_emb(dummy, new_pos)
     cos_old, sin_old = cos_old.unsqueeze(1).float(), sin_old.unsqueeze(1).float()
     cos_new, sin_new = cos_new.unsqueeze(1).float(), sin_new.unsqueeze(1).float()

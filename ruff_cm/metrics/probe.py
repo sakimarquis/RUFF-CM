@@ -12,6 +12,8 @@ import torch
 import torch.nn.functional as F
 from sklearn.linear_model import LogisticRegression
 
+from ruff_cm.store import Artifact, JoblibCodec, Manifest, write
+
 
 @runtime_checkable
 class Probe(Protocol):
@@ -97,8 +99,6 @@ class ProbesByLayerResult:
     test_idx: torch.Tensor | None = None
 
     def to_artifact(self, key, root: str | Path) -> Path:
-        from ruff_cm.store import Artifact, JoblibCodec, Manifest, write
-
         manifest = Manifest.for_key(
             key,
             extras={
@@ -170,9 +170,6 @@ class LinearProbe:
             X_mean = design.X_mean
             U, s, Vt = design.U, design.s, design.Vt
 
-        if design is not None:
-            X_mean = design.X_mean
-            U, s, Vt = design.U, design.s, design.Vt
         y_mean = y.mean()
         yc = y - y_mean
         s2 = s**2
@@ -875,7 +872,7 @@ class TorchLogisticLBFGS:
         C = torch.as_tensor(self.C, dtype=X.dtype, device=self.device)
         optimizer = torch.optim.LBFGS([w, b], max_iter=self.max_iter, line_search_fn="strong_wolfe")
 
-        # LBFGS keeps the source-repo behavior: full-batch logistic loss plus L2 penalty.
+        # Full-batch LBFGS optimizes logistic loss with an L2 penalty.
         def closure():
             optimizer.zero_grad()
             logits = X @ w + b
@@ -1037,23 +1034,23 @@ class TorchLogisticRegression(TorchLogisticLBFGS):
     @classmethod
     def from_state_dict(cls, state: dict) -> Self:
         if "C_values" in state:
-            old = TorchBatchedLogistic.from_state_dict(state)
+            source = TorchBatchedLogistic.from_state_dict(state)
             obj = cls(
-                normalize=old.normalize,
-                C=old.best_C_,
-                class_weight=old.class_weight,
-                max_iter=old.max_iter,
-                device=old.device,
+                normalize=source.normalize,
+                C=source.best_C_,
+                class_weight=source.class_weight,
+                max_iter=source.max_iter,
+                device=source.device,
             )
-            obj.n_features = old.n_features
-            obj.n_classes = old.n_classes
-            obj.num_classes = old.n_classes
-            obj.classes_ = old.classes_
-            obj.weight = old.weight
-            obj.bias = old.bias
-            obj.axis_ = old.weight
-            obj.score_std_ = old.score_std_
-            obj.coef_ = old.coef_
+            obj.n_features = source.n_features
+            obj.n_classes = source.n_classes
+            obj.num_classes = source.n_classes
+            obj.classes_ = source.classes_
+            obj.weight = source.weight
+            obj.bias = source.bias
+            obj.axis_ = source.weight
+            obj.score_std_ = source.score_std_
+            obj.coef_ = source.coef_
             obj.class_weight_ = None
             return obj
         return super().from_state_dict(state)
@@ -1070,7 +1067,7 @@ def fit_per_layer(probe_factory, X_layers: Mapping[int, Any], y, **fit_kwargs) -
 
 def load_probe(path: str | Path) -> Probe:
     path = Path(path)
-    metadata = json.loads(_existing_metadata_path(path).read_text(encoding="utf-8"))
+    metadata = json.loads(_metadata_path(path).read_text(encoding="utf-8"))
     class_name = metadata["class"]
     class_map = _probe_class_map()
     return class_map[class_name].load(path)
@@ -1286,7 +1283,7 @@ def load_classifiers(path: Path) -> dict[int, object]:
 
 def load_clf_dispatch(path: Path):
     path = Path(path)
-    if _any_metadata_path(path).exists():
+    if _metadata_path(path).exists():
         return load_probe(path)
     try:
         loaded = load_classifiers(path)
@@ -1328,19 +1325,6 @@ def _write_probe_metadata(path: Path, class_name: str, metadata: dict, *, storag
 
 def _metadata_path(path: Path) -> Path:
     return path.with_suffix(path.suffix + ".metadata.json")
-
-
-def _legacy_metadata_path(path: Path) -> Path:
-    return path.with_suffix(path.suffix + ".json")
-
-
-def _any_metadata_path(path: Path) -> Path:
-    metadata = _metadata_path(path)
-    return metadata if metadata.exists() else _legacy_metadata_path(path)
-
-
-def _existing_metadata_path(path: Path) -> Path:
-    return _any_metadata_path(path)
 
 
 def _normalize_layer_mapping(captures: Mapping[int, Any] | torch.Tensor) -> dict[int, torch.Tensor]:
@@ -1491,10 +1475,6 @@ def _as_numpy_labels(value) -> np.ndarray:
     return np.asarray(value)
 
 
-def _class_indices(y: torch.Tensor, classes: torch.Tensor) -> torch.Tensor:
-    return (y.reshape(-1, 1) == classes.reshape(1, -1)).long().argmax(dim=1)
-
-
 def _layer_fit_cache_at(
     layer_fit_cache: Mapping[int, LinearLayerFitCache] | Sequence[LinearLayerFitCache] | None,
     layer_idx: int,
@@ -1502,10 +1482,6 @@ def _layer_fit_cache_at(
     if layer_fit_cache is None:
         return None
     return layer_fit_cache[layer_idx]
-
-
-def _to_numpy(value) -> np.ndarray:
-    return _as_numpy_labels(value)
 
 
 def _probe_classes(y: np.ndarray, num_classes: int | None) -> np.ndarray:
@@ -1623,7 +1599,7 @@ def _torch_logistic_from_state_without_model(obj: LogisticProbe, state: dict) ->
     obj.classes_ = np.asarray(classes.detach().cpu().numpy() if isinstance(classes, torch.Tensor) else classes)
     obj.class_weight_ = state.get("class_weight_")
 
-    class _LegacyTorchModel:
+    class _TorchModelView:
         def __init__(self, owner):
             self.owner = owner
             coef = owner.weight.detach().cpu().numpy()
@@ -1651,5 +1627,5 @@ def _torch_logistic_from_state_without_model(obj: LogisticProbe, state: dict) ->
                 idx = self.predict_proba(X).argmax(axis=1).astype(np.int64)
             return self.classes_[idx]
 
-    obj.model_ = _LegacyTorchModel(obj)
+    obj.model_ = _TorchModelView(obj)
     return obj

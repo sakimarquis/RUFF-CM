@@ -169,7 +169,7 @@ class HfBackend:
         continued = _continued_messages(thinking_messages, thinking_message, messages_list)
         chunks = []
         n_fallback = 0
-        old_enable_thinking = self.enable_thinking
+        previous_enable_thinking = self.enable_thinking
         self.enable_thinking = False
         try:
             for index in range(0, len(continued), self.batch_size):
@@ -177,7 +177,7 @@ class HfBackend:
                 chunks.append(scores)
                 n_fallback += fallback
         finally:
-            self.enable_thinking = old_enable_thinking
+            self.enable_thinking = previous_enable_thinking
         return torch.cat(chunks), n_fallback
 
     def generate_batch(
@@ -363,16 +363,6 @@ class HfBackend:
         close_mask = attention_mask.new_ones((attention_mask.shape[0], len(marker_ids)))
         return forced_ids, torch.cat([attention_mask, close_mask], dim=1)
 
-    def _letter_result(self, logits, choices: list[str] | None = None, **metadata) -> GenerateResult:
-        # Keep this local: choice imports backend base types, and backends.__init__ imports HfBackend.
-        from ruff_cm.llm.extract_answer.choice import build_letter_token_ids, compute_letter_log_probs
-
-        letters = choices or [chr(ord("A") + index) for index in range(26)]
-        token_map = build_letter_token_ids(self._tokenizer, letters, variants=[])
-        log_probs = compute_letter_log_probs(logits, token_map)
-        answer = max(log_probs, key=log_probs.get)
-        return GenerateResult(text=answer, finish_reason="stop", raw={"log_probs": log_probs}, **metadata)
-
     def _last_token_logits(self, inputs: dict[str, Any]):
         kwargs = dict(inputs)
         if self._logits_to_keep_kwarg is not None:
@@ -456,13 +446,13 @@ class HfBackend:
         return self._encode_text(self._render_chat(messages, enable_thinking=enable_thinking))
 
     def _encode_messages_batch(self, messages: list[list[Message]], *, enable_thinking: bool | None = None) -> dict[str, Any]:
-        old_padding_side = getattr(self._tokenizer, "padding_side", None)
+        previous_padding_side = getattr(self._tokenizer, "padding_side", None)
         self._tokenizer.padding_side = "left"
         try:
             return self._encode_text([self._render_chat(sample, enable_thinking=enable_thinking) for sample in messages], padding=True)
         finally:
-            if old_padding_side is not None:
-                self._tokenizer.padding_side = old_padding_side
+            if previous_padding_side is not None:
+                self._tokenizer.padding_side = previous_padding_side
 
     def _encode_batch(self, messages: list[Message] | list[list[Message]], target_text: str | list[str] | None = None):
         self._ensure_loaded()

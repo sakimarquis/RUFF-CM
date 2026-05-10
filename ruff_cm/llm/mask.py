@@ -142,10 +142,11 @@ def _token_range_mask(n_tokens: int, start: int, end: int) -> np.ndarray:
 
 
 def _find_subsequence_starts(tokens: Sequence[int], pattern: Sequence[int]) -> list[int]:
+    pattern = tuple(pattern)
     if not pattern:
         return []
     width = len(pattern)
-    return [idx for idx in range(len(tokens) - width + 1) if tuple(tokens[idx : idx + width]) == tuple(pattern)]
+    return [idx for idx in range(len(tokens) - width + 1) if tuple(tokens[idx : idx + width]) == pattern]
 
 
 def _between_tags(tokens: Sequence[int], open_tokens: Sequence[int], close_tokens: Sequence[int]) -> np.ndarray:
@@ -168,9 +169,10 @@ def _between_tags(tokens: Sequence[int], open_tokens: Sequence[int], close_token
 
 
 def _find_subsequence_from(tokens: Sequence[int], pattern: Sequence[int], start: int) -> int | None:
+    pattern = tuple(pattern)
     width = len(pattern)
     for idx in range(start, len(tokens) - width + 1):
-        if tuple(tokens[idx : idx + width]) == tuple(pattern):
+        if tuple(tokens[idx : idx + width]) == pattern:
             return idx
     return None
 

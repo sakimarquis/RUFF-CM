@@ -6,10 +6,7 @@ import pytest
 
 from ruff_cm.configs.aliases import load_aliases
 from ruff_cm.configs.providers import PROVIDERS, ProviderSpec, resolve_provider
-from ruff_cm.configs.tasks import TaskProtocol
 from ruff_cm.configs.thinking import ThinkingConfig, resolve_thinking
-from ruff_cm.llm.reasoning import ThinkingConfig as LegacyThinkingConfig
-from ruff_cm.task_protocol import TaskProtocol as LegacyTaskProtocol
 
 
 HANABI_PROVIDER_FIXTURES = {
@@ -62,18 +59,6 @@ def test_resolve_provider_requires_api_key_env(monkeypatch):
 
     with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
         resolve_provider("openrouter")
-
-
-def test_configs_thinking_and_task_legacy_paths_are_re_exports():
-    assert LegacyThinkingConfig is ThinkingConfig
-    assert LegacyTaskProtocol is TaskProtocol
-
-
-def test_configs_aliases_re_exports_backend_loader(tmp_path: Path):
-    aliases_path = tmp_path / "aliases.yml"
-    aliases_path.write_text("toy:\n  backend: api\n  provider: openai\n  model: gpt-4o\n", encoding="utf-8")
-
-    assert load_aliases(aliases_path)["toy"]["model"] == "gpt-4o"
 
 
 def test_configs_aliases_default_to_bundled_model_aliases():

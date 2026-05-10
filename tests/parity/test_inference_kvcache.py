@@ -16,7 +16,7 @@ from ruff_cm.llm.inference.kvcache import (
 )
 
 
-def legacy_cache(torch, start: int, length: int, layers: int = 2):
+def tuple_kv_cache(torch, start: int, length: int, layers: int = 2):
     return tuple(
         (
             torch.arange(start, start + length, dtype=torch.float32).view(1, 1, length, 1) + layer * 100,
@@ -26,9 +26,9 @@ def legacy_cache(torch, start: int, length: int, layers: int = 2):
     )
 
 
-def test_legacy_cache_truncate_concat_clone_and_legacy_round_trip():
+def test_tuple_kv_cache_truncate_concat_clone_and_round_trip():
     torch = pytest.importorskip("torch")
-    cache = legacy_cache(torch, 0, 4)
+    cache = tuple_kv_cache(torch, 0, 4)
 
     assert to_legacy_kv(cache) is cache
     truncated = truncate_kv(cache, 2)
@@ -39,7 +39,7 @@ def test_legacy_cache_truncate_concat_clone_and_legacy_round_trip():
     assert kv_seq_len(tailed) == 2
     assert torch.equal(tailed[0][0].flatten(), torch.tensor([2.0, 3.0]))
 
-    appended = concat_kv(truncated, legacy_cache(torch, 10, 2))
+    appended = concat_kv(truncated, tuple_kv_cache(torch, 10, 2))
     assert kv_seq_len(appended) == 4
     assert torch.equal(appended[0][0].flatten(), torch.tensor([0.0, 1.0, 10.0, 11.0]))
 

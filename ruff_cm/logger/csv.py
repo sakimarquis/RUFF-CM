@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
+
 from ruff_cm.experimenter.io import from_portable_relpath, portable_relpath
 from ruff_cm.logger.hf_callbacks import CsvLoggingCallback
 
@@ -76,13 +77,13 @@ class CsvLogger:
 
     def _extend_header(self, new_keys: list[str]) -> None:
         # New metric keys are rare; rewriting keeps each row rectangular and CSV-reader friendly.
-        old_rows = []
+        existing_rows = []
         if self.metrics_path.exists() and self._fields:
             with self.metrics_path.open(newline="", encoding="utf-8") as f:
-                old_rows = list(csv.DictReader(f))
+                existing_rows = list(csv.DictReader(f))
         self._fields = self._fields + new_keys
         with self.metrics_path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=self._fields)
             writer.writeheader()
-            for row in old_rows:
+            for row in existing_rows:
                 writer.writerow({key: row.get(key, "") for key in self._fields})

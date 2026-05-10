@@ -57,9 +57,9 @@ class Codec(Protocol[T]):
 
     def decode(self, blob: bytes) -> T: ...
 
-    def write_to(self, payload: T, dir: Path) -> None: ...
+    def write_to(self, payload: T, directory: Path) -> None: ...
 
-    def read_from(self, dir: Path) -> T: ...
+    def read_from(self, directory: Path) -> T: ...
 
 
 @dataclass(frozen=True)
@@ -78,10 +78,10 @@ class JsonCodec:
     def decode(self, blob: bytes) -> Any:
         return json.loads(blob.decode("utf-8"))
 
-    def write_to(self, payload: Any, dir: Path) -> None:
+    def write_to(self, payload: Any, directory: Path) -> None:
         raise NotImplementedError
 
-    def read_from(self, dir: Path) -> Any:
+    def read_from(self, directory: Path) -> Any:
         raise NotImplementedError
 
 
@@ -96,10 +96,10 @@ class NpyCodec:
     def decode(self, blob: bytes) -> np.ndarray:
         return np.load(io.BytesIO(blob), allow_pickle=False)
 
-    def write_to(self, payload: np.ndarray, dir: Path) -> None:
+    def write_to(self, payload: np.ndarray, directory: Path) -> None:
         raise NotImplementedError
 
-    def read_from(self, dir: Path) -> np.ndarray:
+    def read_from(self, directory: Path) -> np.ndarray:
         raise NotImplementedError
 
 
@@ -114,10 +114,10 @@ class JoblibCodec:
     def decode(self, blob: bytes) -> Any:
         return joblib.load(io.BytesIO(blob))
 
-    def write_to(self, payload: Any, dir: Path) -> None:
+    def write_to(self, payload: Any, directory: Path) -> None:
         raise NotImplementedError
 
-    def read_from(self, dir: Path) -> Any:
+    def read_from(self, directory: Path) -> Any:
         raise NotImplementedError
 
 
@@ -134,15 +134,15 @@ class MemmapCodec:
     def decode(self, blob: bytes) -> np.ndarray:
         raise NotImplementedError
 
-    def write_to(self, payload: np.ndarray, dir: Path) -> None:
-        path = dir / "payload.dat"
+    def write_to(self, payload: np.ndarray, directory: Path) -> None:
+        path = directory / "payload.dat"
         path.parent.mkdir(parents=True, exist_ok=True)
         mapped = np.memmap(path, dtype=self.dtype, mode="w+", shape=self.shape)
         mapped[:] = np.asarray(payload, dtype=self.dtype).reshape(self.shape)
         mapped.flush()
 
-    def read_from(self, dir: Path) -> np.memmap:
-        return np.memmap(dir / "payload.dat", dtype=self.dtype, mode="r", shape=self.shape)
+    def read_from(self, directory: Path) -> np.memmap:
+        return np.memmap(directory / "payload.dat", dtype=self.dtype, mode="r", shape=self.shape)
 
 
 def prefix_key(prefix: Iterable[Any]) -> str:
@@ -172,10 +172,10 @@ class PrefixCacheCodec(Generic[V]):
     def decode(self, blob: bytes) -> dict[tuple[Any, ...], V]:
         return load_prefix_cache(json.loads(blob.decode("utf-8")))
 
-    def write_to(self, payload: Mapping[Iterable[Any], V], dir: Path) -> None:
+    def write_to(self, payload: Mapping[Iterable[Any], V], directory: Path) -> None:
         raise NotImplementedError
 
-    def read_from(self, dir: Path) -> dict[tuple[Any, ...], V]:
+    def read_from(self, directory: Path) -> dict[tuple[Any, ...], V]:
         raise NotImplementedError
 
 
@@ -191,13 +191,13 @@ class BundleCodec:
     def decode(self, blob: bytes) -> dict[str, Any]:
         raise NotImplementedError
 
-    def write_to(self, payload: Mapping[str, Any], dir: Path) -> None:
-        dir.mkdir(parents=True, exist_ok=True)
+    def write_to(self, payload: Mapping[str, Any], directory: Path) -> None:
+        directory.mkdir(parents=True, exist_ok=True)
         for name, codec in self.codecs.items():
-            _write_payload(payload[name], dir / f"{name}{codec.ext}", codec)
+            _write_payload(payload[name], directory / f"{name}{codec.ext}", codec)
 
-    def read_from(self, dir: Path) -> dict[str, Any]:
-        return {name: _read_payload(dir / f"{name}{codec.ext}", codec) for name, codec in self.codecs.items()}
+    def read_from(self, directory: Path) -> dict[str, Any]:
+        return {name: _read_payload(directory / f"{name}{codec.ext}", codec) for name, codec in self.codecs.items()}
 
 
 class JsonlCodec(Generic[T]):
@@ -212,10 +212,10 @@ class JsonlCodec(Generic[T]):
     def decode(self, blob: bytes) -> list[dict[str, Any]]:
         return [json.loads(line) for line in blob.decode("utf-8").splitlines() if line.strip()]
 
-    def write_to(self, payload: Iterable[Mapping[str, Any]], dir: Path) -> None:
+    def write_to(self, payload: Iterable[Mapping[str, Any]], directory: Path) -> None:
         raise NotImplementedError
 
-    def read_from(self, dir: Path) -> list[dict[str, Any]]:
+    def read_from(self, directory: Path) -> list[dict[str, Any]]:
         raise NotImplementedError
 
     def write_file(self, payload: Iterable[Mapping[str, Any]], path: str | Path) -> None:

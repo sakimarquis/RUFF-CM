@@ -15,8 +15,8 @@ def two_step_hf_flow(
 ) -> GenerateResult:
     """Delegate HF thinking flow to HfBackend's tensor-splice implementation."""
 
-    old_enable_thinking = getattr(backend, "enable_thinking", None)
-    old_max_thinking_tokens = getattr(backend, "max_thinking_tokens", None)
+    previous_enable_thinking = getattr(backend, "enable_thinking", None)
+    previous_max_thinking_tokens = getattr(backend, "max_thinking_tokens", None)
     backend.enable_thinking = True
     backend.max_thinking_tokens = protocol.max_thinking_tokens or user_cfg.thinking_budget
     try:
@@ -26,7 +26,7 @@ def two_step_hf_flow(
             thinking_budget=backend.max_thinking_tokens,
         )
     finally:
-        if old_enable_thinking is not None:
-            backend.enable_thinking = old_enable_thinking
-        if old_max_thinking_tokens is not None:
-            backend.max_thinking_tokens = old_max_thinking_tokens
+        if previous_enable_thinking is not None:
+            backend.enable_thinking = previous_enable_thinking
+        if previous_max_thinking_tokens is not None:
+            backend.max_thinking_tokens = previous_max_thinking_tokens

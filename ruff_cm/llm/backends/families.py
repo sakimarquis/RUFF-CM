@@ -1,6 +1,6 @@
-"""Compatibility predicates backed by the model-family registry."""
+"""Model-family predicates backed by the shared registry."""
 
-from ruff_cm.llm.families import GEMMA3_TEXT_ONLY_MARKERS, MISTRAL3_MARKERS, identify_family
+from ruff_cm.llm.families import identify_family
 
 
 def is_qwen3_family(model_id: str) -> bool:

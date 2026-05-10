@@ -1,11 +1,5 @@
 from __future__ import annotations
 
-from ruff_cm.llm.backends.families import (
-    is_gemma3_vlm,
-    is_qwen3_thinking,
-    uses_harmony_style,
-    uses_processor_renderer,
-)
 from ruff_cm.llm.families import all_families, identify_family
 
 
@@ -64,13 +58,3 @@ def test_terminal_strategy_splits_qwen_thinking_response_byte_for_byte():
     assert split.thinking == "hidden"
     assert split.answer == " final answer"
     assert split.truncated is False
-
-
-def test_legacy_backend_predicates_are_registry_shims():
-    assert is_qwen3_thinking("Qwen/Qwen3-4B") is True
-    assert is_qwen3_thinking("Qwen/Qwen3-4B-Instruct-2507") is False
-    assert is_gemma3_vlm("google/gemma-3-27b-it") is True
-    assert is_gemma3_vlm("google/gemma-3-1b-it") is False
-    assert uses_processor_renderer("google/gemma-4-26b-a4b-it") is True
-    assert uses_processor_renderer("mistralai/Ministral-3-8B-Instruct") is False
-    assert uses_harmony_style("openai/gpt-oss-20b") is True

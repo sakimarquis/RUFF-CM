@@ -31,13 +31,7 @@ def forward_query_logits(
     query_positions = _coerce_query_positions(query_positions, positions)
     if not any(query_positions):
         return [torch.empty((0, 0), device=input_ids.device) for _ in query_positions]
-    result = forward(
-        model,
-        input_ids,
-        ForwardSpec(output=OutputSpec(positions=query_positions, sparse=sparse)),
-        **forward_kwargs,
-    )
-    return _unpad_logits(result.logits, query_positions)
+    return _forward_output_logits(model, input_ids, query_positions, sparse=sparse, **forward_kwargs)
 
 
 def forward_selected_logits(
@@ -57,16 +51,25 @@ def forward_selected_logits(
     if not any(query_positions):
         width = 0 if token_ids is None else token_ids.numel()
         return [torch.empty((0, width), device=input_ids.device) for _ in query_positions]
+    candidates = None if token_ids is None else tuple(int(token_id) for token_id in token_ids.tolist())
+    return _forward_output_logits(
+        model, input_ids, query_positions, candidates=candidates, sparse=sparse, **forward_kwargs
+    )
+
+
+def _forward_output_logits(
+    model: Any,
+    input_ids,
+    query_positions: list[list[int]],
+    *,
+    candidates: tuple[int, ...] | None = None,
+    sparse: bool = True,
+    **forward_kwargs: Any,
+) -> list[Any]:
     result = forward(
         model,
         input_ids,
-        ForwardSpec(
-            output=OutputSpec(
-                positions=query_positions,
-                candidates=None if token_ids is None else tuple(int(token_id) for token_id in token_ids.tolist()),
-                sparse=sparse,
-            )
-        ),
+        ForwardSpec(output=OutputSpec(positions=query_positions, candidates=candidates, sparse=sparse)),
         **forward_kwargs,
     )
     return _unpad_logits(result.logits, query_positions)
