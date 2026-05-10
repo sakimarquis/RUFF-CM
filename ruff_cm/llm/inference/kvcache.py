@@ -4,6 +4,8 @@ import copy
 from dataclasses import dataclass
 from typing import Any
 
+import torch
+
 
 def to_legacy_kv(cache: Any) -> tuple:
     if hasattr(cache, "to_legacy_cache"):
@@ -103,8 +105,6 @@ def reposition_kv(model: Any, cache: Any, old_start_pos: int, m: int) -> Any:
         return cache
     param = next(model.parameters())
 
-    import torch
-
     old_pos = torch.arange(old_start_pos, old_start_pos + m, device=param.device).unsqueeze(0)
     new_pos = torch.arange(m, device=param.device).unsqueeze(0)
     dummy = torch.zeros(1, device=param.device, dtype=param.dtype)
@@ -162,8 +162,6 @@ def forward_with_kv_delta(
         output = model(input_ids=new_input_ids, attention_mask=attention_mask, use_cache=True, **forward_kwargs)
         return output, output.past_key_values
 
-    import torch
-
     seq_len = int(new_input_ids.shape[1])
     cache_len = kv_seq_len(base_kv) if base_kv is not None else 0
     if seq_len < cache_len:
@@ -206,8 +204,6 @@ def _tail_tensor(tensor: Any, length: int) -> Any:
 
 
 def _concat_tensors(tensors: list[Any]) -> Any:
-    import torch
-
     return torch.cat(tensors, dim=2)
 
 
@@ -228,8 +224,6 @@ def _find_rotary_emb(model: Any) -> Any | None:
 
 
 def _reposition_key(key: Any, cos_old: Any, sin_old: Any, cos_new: Any, sin_new: Any) -> Any:
-    import torch
-
     rotary_dim = cos_old.shape[-1]
     if rotary_dim == 0:
         return key.clone()
@@ -244,8 +238,6 @@ def _reposition_key(key: Any, cos_old: Any, sin_old: Any, cos_new: Any, sin_new:
 
 
 def _rotate_half(x: Any) -> Any:
-    import torch
-
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
     return torch.cat((-x2, x1), dim=-1)

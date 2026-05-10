@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 
 class ArtifactBundle:
     def __init__(self, root: Path):
@@ -25,7 +27,5 @@ class ArtifactBundle:
         return self.root / f"{name}{ext}"
 
     def open_memmap(self, name: str, *, dtype, shape: tuple[int, ...], mode: str = "r"):
-        import numpy as np
-
         self.root.mkdir(parents=True, exist_ok=True)
         return np.memmap(self.member_path(name), dtype=dtype, mode=mode, shape=shape)

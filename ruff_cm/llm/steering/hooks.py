@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable
+
+import torch
 
 from ruff_cm.llm.extract_hiddens.hooks import decoder_layers
-
-if TYPE_CHECKING:
-    import torch
 
 
 class WriteHookContext:

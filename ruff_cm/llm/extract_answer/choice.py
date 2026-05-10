@@ -4,6 +4,8 @@ import math
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
+import torch
+
 from ..backends.base import ChoiceScores
 
 
@@ -45,8 +47,6 @@ def build_letter_token_ids(tokenizer, letters: list[str], *, variants: list[Vari
 
 
 def compute_letter_log_probs(logits, token_id_map: Mapping[str, Sequence[int]]) -> dict[str, float]:
-    import torch
-
     raw_scores = []
     letters = list(token_id_map)
     for letter in letters:
@@ -105,8 +105,6 @@ class ChoiceSet:
         return self.from_logits(logits, normalize=normalize)
 
     def from_logits(self, logits, normalize: bool = True) -> ChoiceScores:
-        import torch
-
         candidate_scores = [self._aggregate_logits(logits[..., token_ids]) for token_ids in self._token_map.values()]
         score_tensor = torch.stack(candidate_scores, dim=-1)
         if normalize:
@@ -135,8 +133,6 @@ class ChoiceSet:
         return ChoiceScores(method="partial", scores=present, complete=not missing, missing=missing, fallback_count=0)
 
     def _aggregate_logits(self, values):
-        import torch
-
         if self._aggregation == "max":
             return values.max(dim=-1).values
         if self._aggregation == "logsumexp":

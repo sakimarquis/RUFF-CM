@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal
 
+import torch
+
 from ruff_cm.llm.extract_hiddens.hooks import UnsupportedArchitectureError, decoder_layers
 
 if TYPE_CHECKING:
@@ -86,8 +88,6 @@ def _select_positions(tensor: Any, positions: Any) -> tuple[Any, Any | None]:
     if positions == "last":
         return tensor[:, -1:, ...], None
     if isinstance(positions, list) and all(isinstance(pos, int) for pos in positions):
-        import torch
-
         indices = torch.tensor(positions, device=tensor.device)
         return tensor.index_select(dim=1, index=indices), None
     if isinstance(positions, list) and all(isinstance(pos, (str, list)) for pos in positions):
@@ -96,8 +96,6 @@ def _select_positions(tensor: Any, positions: Any) -> tuple[Any, Any | None]:
 
 
 def _select_per_sample_positions(tensor: Any, positions: list[Any]) -> tuple[Any, Any]:
-    import torch
-
     if len(positions) != tensor.shape[0]:
         raise ValueError("per-sample capture positions must match batch size")
     per_sample_indices = [_positions_for_sample(pos, tensor.shape[1]) for pos in positions]

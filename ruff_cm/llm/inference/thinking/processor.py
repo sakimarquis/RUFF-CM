@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import torch
+
 from .protocol import ThinkingProtocol
 
 try:
@@ -308,8 +310,4 @@ def _suffix_matches(items: list[int], needle: tuple[int, ...]) -> bool:
 
 
 def _cat_tensors(left, right):
-    try:
-        import torch
-    except Exception as exc:  # pragma: no cover - recovery requires torch-backed models
-        raise RuntimeError("recover_uncaptured_logits requires torch tensors") from exc
     return torch.cat([left, right], dim=1)

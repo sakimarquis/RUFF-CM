@@ -3,6 +3,8 @@ from __future__ import annotations
 import inspect
 from typing import Any
 
+import torch
+
 
 _DECODER_LAYER_PATHS = (
     "layers",
@@ -133,8 +135,6 @@ def _forward_position_logits(
     sparse: bool,
     **forward_kwargs: Any,
 ) -> list[Any]:
-    import torch
-
     _validate_query_positions(input_ids, query_positions)
     target_token_ids = _coerce_token_ids(target_token_ids, input_ids.device)
     if not any(query_positions):
@@ -158,8 +158,6 @@ def _forward_position_logits(
 
 
 def _sparse_logits(model: Any, input_ids, query_positions: list[list[int]], forward_kwargs: dict[str, Any]):
-    import torch
-
     unique_positions = sorted({pos for sample_positions in query_positions for pos in sample_positions})
     position_tensor = torch.tensor(unique_positions, device=input_ids.device, dtype=torch.long)
     outputs = model(input_ids=input_ids, logits_to_keep=position_tensor, **forward_kwargs)
@@ -207,7 +205,6 @@ def _coerce_query_positions(
 def _coerce_token_ids(target_token_ids: Any | None, device: Any) -> Any | None:
     if target_token_ids is None:
         return None
-    import torch
 
     token_ids = torch.as_tensor(target_token_ids, device=device, dtype=torch.long)
     if token_ids.ndim != 1:

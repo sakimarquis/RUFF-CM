@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Oct  3 15:25:58 2022
-
-@author: hdx
-The main codes are adapted from robert yang
-"""
+import os
+from copy import deepcopy
 
 import numpy as np
-import os
 from ruamel import yaml
-from copy import deepcopy
 
 from .._hashing import hash_string
 
@@ -35,24 +28,7 @@ def create_config(base_config, config_ranges, saved_folder, mode, name_keys=None
 
 
 def vary_config(base_config, config_ranges, mode, name_keys=None):
-    """
-    Args:
-        base_config: dict, a base configuration
-        config_ranges: a dictionary of experimental parameters to vary,
-            keys are parameter names, values are lists of parameter values to test
-            config_ranges = {
-                'param1': [val1, val2, ...],
-                'param2': [val3, val4, ...],
-            }
-        name_keys: a list of keys to include in the name
-        mode: str, can take 'combinatorial', 'sequential', and 'control'
-            'combinatorial': loops over Cartesian product of parameters
-            'sequential': loops over parameters together sequentially
-            'control': loops over the value of parameters once a time independently
-    Return:
-        configs: a list of config dict [config1, config2, ...]
-        configs_name: a list of config name [config1_name, config2_name, ...]
-    """
+    """Vary a base config by cartesian product, zipped rows, or one-control-at-a-time rows."""
     if mode == 'combinatorial':
         _vary_config = _vary_config_combinatorial
     elif mode == 'sequential':
@@ -67,7 +43,6 @@ def vary_config(base_config, config_ranges, mode, name_keys=None):
 
 
 def _vary_config_combinatorial(base_config, config_ranges):
-    # Unravel the input index
     keys = config_ranges.keys()
     dims = [len(config_ranges[k]) for k in keys]
     n_max = int(np.prod(dims))
@@ -76,7 +51,6 @@ def _vary_config_combinatorial(base_config, config_ranges):
     for i in range(n_max):
         config_diff = dict()
         indices = np.unravel_index(i, shape=dims)
-        # Set up new config
         for key, index in zip(keys, indices):
             config_diff[key] = config_ranges[key][index]
         config_diffs.append(config_diff)
@@ -107,7 +81,6 @@ def _vary_config_sequential(base_config, config_ranges):
 
 
 def _vary_config_control(base_config, config_ranges):
-    # Unravel the input index
     keys = list(config_ranges.keys())
     dims = [len(config_ranges[k]) for k in keys]
     n_max = int(np.sum(dims))
@@ -133,12 +106,7 @@ def _vary_config_control(base_config, config_ranges):
 
 
 def autoname(configs, config_diffs, name_keys=None):
-    """Helper function for automatically naming models based on configs.
-    Args:
-        configs: a list of config dict [config1, config2, ...]
-        config_diffs: a list of config diff dict [config_diff1, config_diff2, ...]
-        name_keys: a list of keys to include in the name
-    """
+    """Build run names from config differences."""
     configs_name = list()
     for config, config_diff in zip(configs, config_diffs):
         name = ''
@@ -149,15 +117,14 @@ def autoname(configs, config_diffs, name_keys=None):
                     str_val += str(cur)
             else:
                 str_val = str(val)
-            # if name_keys is not None, then only include keys in name_keys
             if (name_keys is None) or (key in name_keys):
-                str_key = str(key).replace("_", "")  # delete '_'
-                if str_key == 'OPTIMPARAMS':  # deal with special case
+                str_key = str(key).replace("_", "")
+                if str_key == 'OPTIMPARAMS':
                     name = name + 'lr' + '-' + str(config['OPTIM_PARAMS']['lr']) + '_'
                     name = name + 'WD' + '-' + str(config['OPTIM_PARAMS']['weight_decay']) + '_'
-                elif str_key == 'PATH':  # deal with special case
+                elif str_key == 'PATH':
                     name = name + hash_string(config['PATH'], uid="", truncate=8) + '_'
                 else:
                     name = name + str_key + '-' + str_val + '_'
-        configs_name.append(name[:-1])  # get rid of the last '_'
+        configs_name.append(name[:-1])
     return configs_name

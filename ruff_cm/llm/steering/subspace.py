@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
+
+import torch
 
 from .hooks import WriteHookContext, mutate_hidden_output
-
-if TYPE_CHECKING:
-    import torch
 
 
 class SubspaceMeanSub:
@@ -39,7 +38,6 @@ def fit_subspace_basis(
         raise NotImplementedError("LDA subspace fitting is not part of the extracted steering surface")
     if method != "pca":
         raise ValueError(f"unknown subspace method: {method!r}")
-    import torch
 
     centered = hiddens - hiddens.mean(dim=0, keepdim=True)
     _, _, vh = torch.linalg.svd(centered.float(), full_matrices=False)
@@ -52,7 +50,7 @@ def subspace_subtract_hook(
     *,
     alpha: float = 1.0,
 ) -> Callable[[torch.Tensor], torch.Tensor]:
-    """Return the legacy hidden-only mutation callable for subspace subtraction."""
+    """Return the hidden-only mutation callable for subspace subtraction."""
 
     intervention = SubspaceMeanSub(basis=basis.T, mu_proj=mean_proj, alpha=alpha, layer_indices=[])
     return intervention._mutate

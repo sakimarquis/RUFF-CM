@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import base64
+import os
 from dataclasses import dataclass, field, replace
 from typing import Any, Literal
 from urllib.parse import urlsplit, urlunsplit
 
 import httpx
+import torch
 
 from ruff_cm.configs.providers import resolve_provider
 from ruff_cm.llm.backends.base import CaptureResult, Message
@@ -128,7 +130,6 @@ def _resolve_config(cfg: SglangConfig) -> SglangConfig:
     if cfg.api_key is not None:
         return cfg
     provider = resolve_provider("sglang")
-    import os
 
     return replace(cfg, base_url=cfg.base_url or provider.base_url, api_key=os.environ[provider.api_key_env])
 
@@ -177,8 +178,6 @@ def _response_items(response: Any) -> list[dict[str, Any]]:
 
 
 def _stack_response_hiddens(items: list[dict[str, Any]], layers: Literal["all"] | list[int]) -> dict[int, Any]:
-    import torch
-
     per_item = [_hidden_by_layer(item, layers) for item in items]
     layer_indices = sorted(set().union(*(item.keys() for item in per_item)))
     return {layer: torch.stack([item[layer] for item in per_item], dim=0) for layer in layer_indices}
@@ -189,8 +188,6 @@ def _hidden_by_layer(item: dict[str, Any], layers: Literal["all"] | list[int]) -
     decoded = _decode_layer_entries(raw)
     if decoded is not None:
         return decoded if layers == "all" else {layer: decoded[layer] for layer in layers}
-
-    import torch
 
     tensor = torch.tensor(raw)
     if tensor.ndim == 2:
@@ -219,7 +216,6 @@ def _raw_hidden_states(item: dict[str, Any]) -> Any:
 def _decode_layer_entries(raw: Any) -> dict[int, Any] | None:
     if not isinstance(raw, list) or not raw or not all(isinstance(entry, dict) and "layer" in entry for entry in raw):
         return None
-    import torch
 
     decoded = {}
     for entry in raw:

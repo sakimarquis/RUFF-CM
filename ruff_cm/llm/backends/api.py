@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import math
 import os
+import subprocess
 import time
 from typing import Any
 
@@ -558,8 +559,6 @@ class ApiBackend:
         return "/".join([self.google_batch_gcs_prefix, *clean_parts])
 
     def _run_gcloud(self, args: list[str]):
-        import subprocess
-
         proc = subprocess.run(["gcloud", *args], check=False, capture_output=True, text=True)
         if proc.returncode != 0:
             msg = (proc.stderr or proc.stdout).strip()

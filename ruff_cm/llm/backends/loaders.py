@@ -6,6 +6,8 @@ from itertools import groupby
 from types import SimpleNamespace
 from typing import Any, Literal
 
+import torch
+
 from .families import is_gemma3_family, is_gemma3_vlm, is_gemma4_family, is_mistral3_family, uses_processor_renderer
 
 
@@ -144,8 +146,6 @@ def print_device_map(model: Any) -> None:
             indexes = [item[0] for item in group]
             print(f"  layers {indexes[0]}-{indexes[-1]} -> device {device}")
 
-    import torch
-
     for index in range(torch.cuda.device_count()):
         allocated = torch.cuda.memory_allocated(index) / 1024**3
         total = torch.cuda.get_device_properties(index).total_memory / 1024**3
@@ -208,8 +208,6 @@ def _model_class(tfm: SimpleNamespace, model_id: str):
 
 
 def _resolve_torch_dtype(model_id: str, dtype: Any | str | None, tfm: SimpleNamespace):
-    import torch
-
     if dtype not in {None, "auto"}:
         return getattr(torch, dtype) if isinstance(dtype, str) else dtype
 

@@ -4,6 +4,8 @@ from dataclasses import replace
 import inspect
 from typing import Any
 
+import torch
+
 from ruff_cm.configs.thinking import ThinkingConfig
 from ruff_cm.llm.inference.thinking import (
     HfThinkingCodec,
@@ -465,8 +467,6 @@ class HfBackend:
         return encoded["input_ids"], encoded["attention_mask"]
 
     def _torch(self):
-        import torch
-
         return torch
 
 
@@ -499,8 +499,6 @@ def _full_attention_mask(inputs: dict[str, Any], output_ids: Any):
 
 
 def _cat_tensors(left, right):
-    import torch
-
     return torch.cat([left, right], dim=1)
 
 

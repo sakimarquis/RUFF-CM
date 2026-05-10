@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
-if TYPE_CHECKING:
-    import torch
-    CapturePositions = list[int] | list[list[int]] | list[torch.Tensor]
-else:
-    CapturePositions = Any
+import torch
+
+CapturePositions = list[int] | list[list[int]] | list[torch.Tensor]
 
 HookMode = Literal["last_token", "full_sequence", "positions"]
 
@@ -105,8 +103,6 @@ def _read_hook(
 def _gather_hidden_positions(
     hidden: torch.Tensor, capture_positions: CapturePositions, *, cpu_offload: bool
 ) -> torch.Tensor:
-    import torch
-
     positions = _normalize_positions(capture_positions, hidden.shape[0], device=hidden.device)
     gathered = []
     for sample_idx, sample_positions in enumerate(positions):
@@ -119,8 +115,6 @@ def _normalize_positions(
     capture_positions: CapturePositions, batch_size: int, *, device: torch.device
 ) -> list[torch.Tensor]:
     """Resolve shared or per-row capture specs after the hook sees batch size."""
-
-    import torch
 
     if all(isinstance(position, int) for position in capture_positions):
         row_positions = torch.tensor(capture_positions, dtype=torch.long, device=device)

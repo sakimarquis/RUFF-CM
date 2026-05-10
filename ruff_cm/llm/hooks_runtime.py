@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+import torch
 
 from ruff_cm.llm.extract_hiddens.hooks import (
     HookMode,
@@ -21,8 +22,6 @@ def extract_layerwise_at_positions(
     token_positions: list[int],
     layer_indices: list[int],
 ) -> np.ndarray:
-    import torch
-
     # Normalize captured prefill tensors to one sequence so each layer contributes n_positions x hidden_dim.
     selected_layers = []
     for layer_idx in layer_indices:

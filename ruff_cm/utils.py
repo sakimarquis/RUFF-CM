@@ -9,7 +9,6 @@ from ruamel.yaml import YAML
 import numpy as np
 import torch
 import torch.optim as optim
-# import psutil
 
 from .logger import Logger, TensorBoardLogger, DummyLogger, WandBLogger
 from ._hashing import hash_string
@@ -35,16 +34,13 @@ def timer(func: Callable):
 
 
 def write_summary(path: str, metrics: Dict[str, List]):
-    """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters
-    :param path: pattern f"./results/{experiment}/{run}", experiment folder where the summary will be saved
-    :param metrics: keys are metric names, values are lists of metric values
-    """
+    """Write experiment metrics and hyperparameters to per-run and aggregate CSV files."""
     for v in metrics.values():
         assert isinstance(v, (list, tuple, np.ndarray)), "values in metrics should be list, tuple or np.ndarray"
     components = os.path.normpath(path).split(os.sep)
     idx = components.index("results")
     ex_path = f"{'/'.join(components[:idx+2])}"
-    run_name = components[idx+2] if len(components[idx:]) > 2 else "run"  # sub-folder name is the name of the run
+    run_name = components[idx+2] if len(components[idx:]) > 2 else "run"
     params_key, params_val = get_hyperparams_from_name(run_name)
 
     local_path = f"{ex_path}/{run_name}"
@@ -56,13 +52,11 @@ def write_summary(path: str, metrics: Dict[str, List]):
 
 
 def _write_summary_csv(run_name, params_key, params_val, metrics, summary_file):
-    """write the summary of the experiment to a csv file, summary includes the loss and hyperparameters"""
-    file_exist = os.path.isfile(summary_file)  # codes below will create the summary_file
+    file_exist = os.path.isfile(summary_file)
 
     with open(summary_file, 'a+', newline='') as file:
         writer = csv.writer(file)
 
-        # Write the header only if the file does not exist
         if not file_exist:
             header = ['ex_name'] + params_key
             for key, value in metrics.items():
@@ -72,7 +66,6 @@ def _write_summary_csv(run_name, params_key, params_val, metrics, summary_file):
                     header.append(key)
             writer.writerow(header)
 
-        # write the hyperparameters and metrics
         row = [run_name] + params_val
         for value in metrics.values():
             row.extend(value)
@@ -80,16 +73,9 @@ def _write_summary_csv(run_name, params_key, params_val, metrics, summary_file):
 
 
 def get_hyperparams_from_name(run_name):
-    """get the params values from the config file, if the config file is not formatted correctly, return empty list
-    
-    example:
-        run_name = "lr-0.001_batch_size-32_optimizer-Adam_scheduler-WarmUpLR"
-        params_key = ["lr", "batch_size", "optimizer", "scheduler"]; params_val = ["0.001", "32", "Adam", "WarmUpLR"]
-    """
-    params_key_val = run_name.split("_")  # Split the input string by underscores
+    """Parse key-value hyperparameters from a run name."""
+    params_key_val = run_name.split("_")
     try:
-        # params_key = [s.split("-")[0] for s in params_key_val]  # Extract the keys before the hyphens
-        # params_val = [s.split("-")[1] for s in params_key_val]  # Extract the values after the hyphens
         result = {}
         current_key = None
         current_value = []
@@ -106,8 +92,8 @@ def get_hyperparams_from_name(run_name):
         params_key = list(result.keys())
         params_val = list(result.values())
     except IndexError:
-        params_key = []  # catch the error if there is nothing before hyphen
-        params_val = []  # catch the error if there is nothing after hyphen
+        params_key = []
+        params_val = []
     return params_key, params_val
 
 
@@ -146,7 +132,7 @@ def get_scheduler(params, optimizer):
         step_size = params["SCHED_PARAMS"]["step_size"]
         gamma = params["SCHED_PARAMS"]["gamma"]
         init_lr = lr / batch_size
-        # start from lr / batch_size, then linearly increase to lr in warmup_steps, then decay by gamma after that
+        # Warm up from scaled LR, then decay by gamma after the warmup window.
         lr_lambda = lambda step: init_lr + ((lr - init_lr) / warmup_steps) * step \
             if step <= warmup_steps else lr * gamma ** ((step - warmup_steps) // step_size)
         return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
@@ -171,7 +157,7 @@ def get_logger(path=None, logger="debug", name="Epoch", record_interval=100, con
 
 
 def get_expt_name(path):
-    pattern = r"/results/(.*)"  # search for the directory after '/results/'
+    pattern = r"/results/(.*)"
     match = re.search(pattern, path)
 
     if match:
@@ -182,7 +168,6 @@ def get_expt_name(path):
 
 
 def get_cache_dir(path, cache_dir):
-    """store the log files in the cache directory"""
     expt_dir = get_expt_name(path)
     expt_cache_dir = cache_dir + expt_dir
     return expt_cache_dir
@@ -213,12 +198,3 @@ def load_yaml(file_path: str) -> Dict:
 def calculate_bic(likelihood: float, num_params: int, sample_size: int) -> float:
     bic = -2 * np.log(likelihood) + num_params * np.log(sample_size)
     return bic
-
-# def print_ram_usage(idx, use_cuda=False):
-#     ram = psutil.virtual_memory()
-#     ram_percent = (ram.total - ram.available) / ram.total * 100
-#     swap_percent = psutil.swap_memory().percent
-#     print(f"RAM usage: {ram_percent:.2f}%, swap usage: {swap_percent:.2f}%, idx: {idx}")
-#     if torch.cuda.is_available() and use_cuda:
-#         vram_percent = torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated()
-#         print(f"GPU memory usage: {vram_percent * 100:.2f}%")

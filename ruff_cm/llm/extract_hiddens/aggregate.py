@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import torch
+
 
 ObsCountFn = Callable[[dict], int]
 
 
 def group_mean(hiddens, group_idx, group_shape: tuple[int, ...], *, center: bool = True):
-    import torch
-
     hiddens_f = hiddens.to(dtype=torch.float32)
     flat_idx = _flat_group_indices(group_idx, group_shape)
     n_groups = _prod(group_shape)
@@ -62,8 +62,6 @@ def pack_hidden_results(
         for field in drop_fields:
             stripped.pop(field, None)
         stripped_results.append(stripped)
-
-    import torch
 
     packed = torch.cat(kept_hiddens, dim=1) if kept_hiddens else None
     if packed is not None and packed.shape[1] != total_obs:
@@ -128,8 +126,6 @@ def mean_pool_span(hidden, span: tuple[int, int], *, dtype_preserving: bool = Tr
 
 
 def _flat_group_indices(group_idx, group_shape: tuple[int, ...]):
-    import torch
-
     idx = group_idx.to(dtype=torch.long)
     if idx.ndim == 1:
         idx = idx.unsqueeze(1)

@@ -115,7 +115,7 @@ class DummyLogger(ABCLogger):
 
 
 class Logger(ABCLogger):
-    """Console scalar logger kept for the historical `ruff_cm.logger.Logger` import."""
+    """Console scalar logger for the `ruff_cm.logger.Logger` import."""
 
     def __init__(self, logger_name="Iter", record_interval=RECORD_INTERVAL):
         self.record_interval = record_interval
@@ -170,7 +170,7 @@ class TensorBoardLogger(ABCLogger):
 
 
 class WandBLogger(ABCLogger):
-    """Legacy cross-validation WandB logger with lazy wandb import."""
+    """Cross-validation WandB logger with lazy wandb import."""
 
     def __init__(self, config, name, record_interval):
         self.record_interval = record_interval
@@ -223,7 +223,7 @@ class WandBLogger(ABCLogger):
 
 
 def wandb_run_trainer(trainer, config, project_name, config_file, silent=True, default_log_dir=False):
-    """Run the historical trainer wrapper inside a WandB run."""
+    """Run a trainer inside a WandB run."""
     trainer.logger_type = "wandb"
     if default_log_dir:
         log_dir = None

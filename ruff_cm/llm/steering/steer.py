@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import torch
 
 from .hooks import WriteHookContext, mutate_hidden_output
-
-if TYPE_CHECKING:
-    import torch
 
 
 class NormMatchedSteer:
@@ -58,8 +55,6 @@ class ActivationPatcher:
 
 
 def _position_tensor(positions: list[int], sequence_length: int, device):
-    import torch
-
     normalized = [position % sequence_length if position < 0 else position for position in positions]
     return torch.tensor(normalized, device=device, dtype=torch.long)
 
