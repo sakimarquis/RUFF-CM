@@ -1,0 +1,11 @@
+[
+  {"hypothesis": "even numbers", confidence": 0.8,}
+]
+---
+[
+  {hypothesis: "multiples of 3", confidence: "0.6 confidence",}
+]
+---
+[
+  {"hypothesis": "prime numbers", "confidence": 0.4}
+] extra trailing prose

@@ -1,0 +1,2 @@
+{"type": "parse_failure", "request_idx": 0, "raw_text": "{}", "parser_name": "parse_json_with_repair", "attempt": 3, "timestamp": 0.0}
+{"type": "summary", "successes": 0, "failures": 1, "n_attempts": 3}

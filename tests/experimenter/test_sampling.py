@@ -39,14 +39,15 @@ def test_balanced_sample_distributes_remainder_within_one_and_reaches_target():
     assert max(counts) - min(counts) <= 1
 
 
-def test_balanced_sample_concatenates_group_samples_in_mapping_order():
+def test_balanced_sample_balances_after_final_shuffle():
     groups = {"a": list(range(0, 10)), "b": list(range(100, 110)), "c": list(range(200, 210))}
 
     samples = balanced_sample(groups, 6, random.Random(0))
 
-    assert all(item < 100 for item in samples[:2])
-    assert all(100 <= item < 200 for item in samples[2:4])
-    assert all(item >= 200 for item in samples[4:])
+    assert len(samples) == 6
+    assert sum(item < 100 for item in samples) == 2
+    assert sum(100 <= item < 200 for item in samples) == 2
+    assert sum(item >= 200 for item in samples) == 2
 
 
 def test_balanced_sample_deterministic_for_fixed_rng_seed():

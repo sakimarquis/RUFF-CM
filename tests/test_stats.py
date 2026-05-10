@@ -3,7 +3,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
 
 from ruff_cm import stats
 
@@ -73,13 +72,13 @@ assert stats.__name__ == "ruff_cm.stats"
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
-def test_batched_spearmanr_matches_scipy_for_random_rows():
+def test_batched_spearmanr_matches_ranked_pearson_for_random_rows():
     rng = np.random.default_rng(0)
     x = rng.normal(size=(5, 12))
     y = rng.normal(size=(5, 12))
 
     actual = stats.batched_spearmanr(x, y)
-    expected = np.array([spearmanr(x_row, y_row).statistic for x_row, y_row in zip(x, y)])
+    expected = np.array([_spearmanr_reference(x_row, y_row) for x_row, y_row in zip(x, y)])
 
     np.testing.assert_allclose(actual, expected)
 
@@ -96,6 +95,31 @@ def test_batched_spearmanr_uses_average_ranks_for_ties():
     y = np.array([[4, 4, 2, 1], [1, 2, 2, 5]])
 
     actual = stats.batched_spearmanr(x, y)
-    expected = np.array([spearmanr(x_row, y_row).statistic for x_row, y_row in zip(x, y)])
+    expected = np.array([_spearmanr_reference(x_row, y_row) for x_row, y_row in zip(x, y)])
 
     np.testing.assert_allclose(actual, expected)
+
+
+def _spearmanr_reference(x, y):
+    return _pearsonr(_average_ranks(x), _average_ranks(y))
+
+
+def _average_ranks(values):
+    values = np.asarray(values)
+    order = np.argsort(values, kind="mergesort")
+    ranks = np.empty(len(values), dtype=float)
+    sorted_values = values[order]
+    start = 0
+    while start < len(values):
+        end = start + 1
+        while end < len(values) and sorted_values[end] == sorted_values[start]:
+            end += 1
+        ranks[order[start:end]] = 0.5 * (start + 1 + end)
+        start = end
+    return ranks
+
+
+def _pearsonr(x, y):
+    x_centered = x - x.mean()
+    y_centered = y - y.mean()
+    return np.sum(x_centered * y_centered) / np.sqrt(np.sum(x_centered**2) * np.sum(y_centered**2))

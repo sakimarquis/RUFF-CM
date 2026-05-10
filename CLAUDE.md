@@ -50,3 +50,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Preserve existing lazy-loading behavior for heavyweight LLM dependencies.
 - Optimize only when it improves clarity or runtime without changing downstream contracts.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live as local markdown files under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical triage roles, each using its default string as the status value. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout — `CONTEXT.md` and `docs/adr/` at the repo root (created lazily). See `docs/agents/domain.md`.

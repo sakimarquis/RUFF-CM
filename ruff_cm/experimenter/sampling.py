@@ -9,39 +9,45 @@ T = TypeVar("T")
 
 
 def _largest_feasible_balanced_size(capacities: Sequence[int], target_n: int) -> int:
-    assert capacities
+    """Return the largest total whose balanced allocation fits all groups."""
+    if not capacities or target_n <= 0:
+        return 0
 
-    # A total is feasible when all groups supply the base count and enough groups supply the remainder.
-    for total in range(min(target_n, sum(capacities)), -1, -1):
-        base, remainder = divmod(total, len(capacities))
-        remainder_capacity = sum(capacity >= base + 1 for capacity in capacities)
-        if all(capacity >= base for capacity in capacities) and remainder_capacity >= remainder:
-            return total
-    raise AssertionError("zero is always feasible")
-
-
-def _balanced_counts(capacities: Sequence[int], target_n: int) -> list[int]:
-    total = _largest_feasible_balanced_size(capacities, target_n)
-    base, remainder = divmod(total, len(capacities))
-    counts = [base] * len(capacities)
-
-    # Assign remainder slots in input order where capacity permits, preserving the <=1 balance invariant.
-    for index, capacity in enumerate(capacities):
-        if remainder == 0:
-            break
-        if capacity >= base + 1:
-            counts[index] += 1
-            remainder -= 1
-    return counts
+    capacities = sorted(capacities, reverse=True)
+    n_groups = len(capacities)
+    for sample_n in range(target_n, -1, -1):
+        base, extra = divmod(sample_n, n_groups)
+        if capacities[-1] < base:
+            continue
+        if extra and capacities[extra - 1] < base + 1:
+            continue
+        return sample_n
+    return 0
 
 
 def balanced_sample(groups: Mapping[K, Sequence[T]], target_n: int, rng: random.Random) -> list[T]:
-    capacities = [len(items) for items in groups.values()]
-    counts = _balanced_counts(capacities, target_n)
+    """Sample as evenly as possible across groups, shrinking only when necessary."""
+    if target_n <= 0:
+        return []
+
+    shuffled_groups = {key: list(items) for key, items in groups.items() if items}
+    if not shuffled_groups:
+        return []
+
+    for items in shuffled_groups.values():
+        rng.shuffle(items)
+
+    labels = sorted(shuffled_groups, key=lambda key: (-len(shuffled_groups[key]), str(key)))
+    capacities = [len(shuffled_groups[label]) for label in labels]
+    sample_n = _largest_feasible_balanced_size(capacities, min(target_n, sum(capacities)))
+    base, extra = divmod(sample_n, len(labels))
 
     samples: list[T] = []
-    for items, count in zip(groups.values(), counts, strict=True):
-        samples.extend(rng.sample(list(items), count))
+    for index, label in enumerate(labels):
+        take = base + (1 if index < extra else 0)
+        samples.extend(shuffled_groups[label][:take])
+
+    rng.shuffle(samples)
     return samples
 
 

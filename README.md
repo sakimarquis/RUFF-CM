@@ -19,6 +19,8 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 
 - `ruff_cm.llm`: backend protocols, API/HF adapters, choice scoring, hidden-state capture, and thinking-mode resolution.
 - `ruff_cm.experimenter`: legacy config-grid helpers plus explicit experiment-cell identity.
+- `ruff_cm.metrics`: statistics, plotting, behavioral metrics, representation geometry, and probe classifiers.
+- `ruff_cm.eval`: benchmark trial schemas, JSONL persistence, driver loops, finalizers, and sampling/generation helpers.
 - `ruff_cm.store`: content-addressed artifact keys with sidecar metadata checks.
 - `ruff_cm.task_protocol`: lightweight task interfaces shared by downstream experiments.
 - `ruff_cm.logger`, `ruff_cm.plotter`, `ruff_cm.nn_helper`, `ruff_cm.slurm`, `ruff_cm.utils`: older utility modules kept for downstream compatibility.
@@ -28,17 +30,30 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 `ruff_cm.llm` provides small primitives shared by LLM research repos:
 
 - `ruff_cm.llm.backends`: `Message`, `GenerateResult`, `ChoiceScores`, `CaptureResult`, `Generator`, `Scorer`,
-  `HiddenReader`, `ApiBackend`, `HfBackend`, `create_backend`, and `load_aliases`.
+  `BinaryScorer`, `HiddenReader`, `ApiBackend`, `HfBackend`, `LoaderConfig`, `load_hf_model_and_renderer`, family predicates,
+  `create_backend`, and `load_aliases`.
 - `ruff_cm.llm`: `ChoiceSet`, `CaptureMode`, `CaptureSpec`, `HiddenCapture`, `ThinkingConfig`, and
   `resolve_thinking`.
+- `ruff_cm.llm.inference`: forward execution, KV-cache utilities, latent-thought generation, thinking-runtime
+  helpers, batch request scaffolding, and composable generation retry/parse drivers under one namespace.
 - `ruff_cm.llm.execution`: `forward_hidden_only`, `forward_query_logits`, and `forward_selected_logits` for
   query-position logits without forcing downstream code to materialize more tensor output than it needs.
 - `ruff_cm.llm.locator`: `BoundaryPlan` and token-position helpers for converting semantic boundaries into
   capture/query positions.
+- `ruff_cm.llm.extract_hiddens`: hidden-capture types, read-only forward hooks, output-side probe positions,
+  hidden aggregation, and compatibility shims for older capture/hook/locator paths.
 - `ruff_cm.llm.batch`: `RequestRecord`, `JobManifest`, and ordered result collection for provider batch adapters.
-- `ruff_cm.llm.spans`: `assistant_header`, `locate_message`, `find_subsequences`, `tokenize_with_loss_mask`
-  for chat-template-aware token span resolution.
-- `ruff_cm.llm.parsing`: free-form answer extraction, terminal verdict detection, and small JSON repair helpers.
+- `ruff_cm.llm.spans`: compatibility imports backed by `ruff_cm.llm.prompt` for `assistant_header`,
+  `locate_message`, `find_subsequences`, and `tokenize_with_loss_mask`.
+- `ruff_cm.llm.prompt`: `Message`, prompt composition helpers, chat-template introspection, and loss-mask
+  tokenization helpers for chat-template-aware token span resolution.
+- `ruff_cm.llm.extract_answer`: choice scoring with token variants, free-form JSON repair, float coercion,
+  and terminal fixed-set answer extraction.
+- `ruff_cm.llm.inference.thinking`: tokenizer-derived thinking protocols, HF close-budget processors,
+  post-`</think>` logits capture, and two-stage API/HF thinking flows.
+- `ruff_cm.llm.parsing`: compatibility imports backed by `ruff_cm.llm.extract_answer.parsing`.
+- `ruff_cm.llm.steering`: write-side forward hooks for subspace subtraction, norm-matched steering, and
+  activation patching during inference.
 - `ruff_cm.llm.hooks_runtime`: forward-hook hidden capture, layerwise position extraction, write-hook mutation, and subspace subtraction helpers.
 - `ChoiceSet` scores single-token candidates from full logits (`exact`) or API top-logprobs (`partial`).
 - `CaptureSpec` and `HiddenCapture` capture decoder-layer hidden states for prefill and teacher-forced positions.
@@ -62,20 +77,51 @@ API backends support OpenAI-compatible chat-completions providers:
 - `openrouter`: reads `OPENROUTER_API_KEY` and uses `https://openrouter.ai/api/v1`.
 - `vllm`: reads `VLLM_API_KEY`.
 - `sglang`: reads `SGLANG_API_KEY`.
+- `google_cloud`: reads `GOOGLE_CLOUD_API_KEY` for Gemini direct calls, or uses Vertex project/location settings.
+- `anthropic_vertex`: uses Anthropic on Vertex project/location settings.
 
 `HfBackend` loads the tokenizer/model lazily on first use. It supports generation, exact single-token choice scoring,
 and hidden capture. Captured hidden tensors are keyed by decoder layer; selected positions are represented as
 `batch x positions x hidden_dim`.
 
+`load_hf_model_and_renderer` is a lower-level HF loader for downstream repos that need auto dtype selection,
+multi-GPU `device_map`, padding setup, PEFT merge, or processor-backed multimodal renderers without adopting
+`HfBackend`.
+
 `resolve_thinking` normalizes downstream thinking-mode config for HF, OpenAI API aliases, and Google Cloud alias
 metadata. `create_backend` itself instantiates only `api` and `hf` aliases.
+
+`SglangHiddenReader` calls a running SGLang server's `/generate` endpoint with `return_hidden_states=True` and
+`max_new_tokens=0`, then returns hidden tensors keyed by decoder layer with shape `batch x positions x hidden_dim`.
+It supports `CaptureMode.PREFILL`; use `HfBackend` for teacher-forcing capture. When using SGLang prefix caching,
+pass `prefix_cache_id` and configure `SglangConfig.prefix_cache_offsets` so explicit capture positions are shifted
+from full-prompt coordinates into the server's post-prefix tensor coordinates. `SGLANG_LIVE=1` and `SGLANG_BASE_URL`
+opt into the live smoke test.
 
 The toolkit intentionally does not own downstream task loops, provider batch submission, result layouts,
 prompt/verifier frameworks, or analysis pipelines.
 
+## Benchmark Eval
+
+`ruff_cm.eval` provides shared benchmark driver primitives without lifting domain-specific adapters:
+
+- `Trial`, `validate_trial`, and `make_sample_id` define the canonical per-sample JSONL schema.
+- `init_benchmark_trial_jsonls`, `append_benchmark_trials`, and `read_trials` persist one JSONL per benchmark.
+- `run_accuracy_benchmark`, `run_mc_accuracy_benchmark`, and `run_partial_credit_benchmark` run generic sampled loops.
+- `finalize_accuracy`, `finalize_f1`, and `finalize_partial_credit` summarize category stats.
+- `stratified_sample_hf`, `generate_text_with_budget`, `mc_answer`, `apply_chat`, `auto_max_chars`, and
+  `short_answer_match` cover reusable benchmark plumbing.
+
+Install `.[eval]` when a downstream benchmark adapter needs Hugging Face `datasets`.
+
+Remaining adapter and candidate work is tracked in
+`docs/superpowers/specs/2026-04-29-remaining-ruff-cm-toolkit-scope.md`.
+
 ## Experiment Helpers
 
 `ruff_cm.experimenter` keeps the original config-grid helpers and adds `Cell`, `CellId`, and `expand_grid` for explicit experiment cell identity.
+It also provides run-manifest helpers, tensor-aware JSON/joblib I/O, and `ruff_cm.experimenter.store`
+re-exports for artifact identity plus memmap-backed tensor stores.
 
 Sampling helpers cover common experiment subset patterns:
 
@@ -93,10 +139,22 @@ for cell in cells:
     print(cell.name, cell.factors, cell.path)
 ```
 
+## Logger Helpers
+
+`ruff_cm.logger` provides a small run-logging protocol plus concrete WandB, CSV, multi-sink, and no-op loggers.
+The package keeps the historical console/TensorBoard/WandB names importable while adding:
+
+- `CsvLogger(out_dir)` — appends scalar rows to `metrics.csv`, widens headers when new metric keys appear, writes summaries to `summary.json`, and records the latest checkpoint in `latest.json`.
+- `WandbLogger` — logs scalar events and checkpoint manifests through an active WandB run.
+- `MultiLogger([...])` and `NoopLogger()` — fan-out or disabled logging for shared training loops.
+- `make_logger(["csv" | "wandb" | "noop"], project=..., run_name=..., config=..., base_dir=...)` and
+  `resume_logger([...], project=..., run_name=..., base_dir=...)` — lightweight construction helpers.
+- `hf_report_to()` / `hf_callbacks()` — Hugging Face Trainer integration hooks for supported sinks.
+
 ## Artifact Identity
 
-`ruff_cm.store.ArtifactKey` standardizes identity fingerprints without imposing a shared results directory layout or file format.
-`ruff_cm.store.cache_metadata` provides fixed-path metadata sidecars for stale-cache checks.
+`ruff_cm.store.ArtifactKey` keeps caller-controlled artifact paths while preserving opt-in identity fingerprints.
+`ruff_cm.store.cache_metadata` provides sibling `.metadata.json` sidecars for stale-cache checks.
 `ruff_cm.store.prefix_cache` provides tuple-prefix JSON codecs and trajectory reconstruction helpers.
 `ruff_cm.store.ArtifactBundle` stores metadata plus named bundle members such as memmaps.
 
@@ -108,11 +166,14 @@ from ruff_cm.store import ArtifactKey, read_artifact, write_artifact
 key = ArtifactKey("scores", ("qwen3-4b",), {"task": "nback", "seed": 0})
 path = write_artifact(key, Path("artifacts"), b"payload", ext=".bin")
 payload = read_artifact(key, Path("artifacts"), ext=".bin")
+assert path == Path("artifacts/scores/qwen3-4b.bin")
+assert key.fingerprinted_path(Path("artifacts"), ext=".bin").name == f"{key.fingerprint()}.bin"
 ```
 
 ## Plotter Helpers
 
-`ruff_cm.plotter` provides matplotlib styling and plot templates shared by downstream repos:
+`ruff_cm.metrics.plotting` provides matplotlib styling and plot templates shared by downstream repos.
+The old `ruff_cm.plotter` path re-exports the same helpers for compatibility:
 
 - `set_mpl(size=8)` — publication defaults (Arial, no top/right spines, dpi=600).
 - `save_fig(fig, path, fmt=None, dpi=300)` — tight-layout save + close.
@@ -123,13 +184,22 @@ payload = read_artifact(key, Path("artifacts"), ext=".bin")
 
 ## Stats Helpers
 
-`ruff_cm.stats` provides small statistical helpers for analysis and plotting:
+`ruff_cm.metrics.stats` provides small statistical helpers for analysis and plotting.
+The old `ruff_cm.stats` path re-exports the same helpers for compatibility:
 
 - `format_pvalue(p, italic=False)` formats p-values using common reporting thresholds and LaTeX for very small values.
 - `mean_sem(data)` stacks per-key arrays and returns nan-aware mean and SEM dictionaries.
 - `smooth_curve_ci(df, value_col=..., group_col="position", window=5, ci=1.96)` returns smoothed grouped means
   and confidence bands.
 - `batched_spearmanr(x, y)` computes Spearman correlations along the last axis with average ranks for ties.
+
+## Metrics Helpers
+
+`ruff_cm.metrics` groups reusable quantitative analysis code:
+
+- `behavioral`: SDT counts, meta-d prime dictionaries, Cohen's kappa, ECE, target-sequence and auto-monotonicity, and progress-drop scores.
+- `geometry`: linear CKA, subspace angles, Procrustes rotation, RDMs, cosine similarities, and PCA rule axes.
+- `probe`: torch-based linear/logistic/PCA probes, per-layer training, and classifier save/load helpers.
 
 ## Tests
 

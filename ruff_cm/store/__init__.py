@@ -3,6 +3,7 @@ from ruff_cm.store.bundle import ArtifactBundle
 from ruff_cm.store.cache_metadata import (
     StaleCacheError,
     metadata_path,
+    metadata_fields_match,
     read_cache_metadata,
     require_cache_metadata,
     write_cache_metadata,
@@ -22,6 +23,7 @@ __all__ = [
     "StaleCacheError",
     "load_prefix_cache",
     "metadata_path",
+    "metadata_fields_match",
     "parse_prefix_key",
     "prefix_key",
     "read_artifact",

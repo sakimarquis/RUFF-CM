@@ -22,10 +22,16 @@ class ArtifactKey:
         return hashlib.sha256(identity.encode("utf-8")).hexdigest()[:16]
 
     def path(self, root: Path, ext: str = "") -> Path:
+        path = root / self.namespace
+        if self.relative_parts:
+            path = path.joinpath(*self.relative_parts)
+        return path.with_suffix(ext) if ext else path
+
+    def fingerprinted_path(self, root: Path, ext: str = "") -> Path:
         return root / self.namespace / Path(*self.relative_parts) / f"{self.fingerprint()}{ext}"
 
     def sidecar_path(self, root: Path) -> Path:
-        return self.path(root).with_name(f"{self.fingerprint()}.meta.json")
+        return self.path(root).with_suffix(".metadata.json")
 
 
 def write_artifact(key: ArtifactKey, root: Path, payload: bytes, *, ext: str) -> Path:

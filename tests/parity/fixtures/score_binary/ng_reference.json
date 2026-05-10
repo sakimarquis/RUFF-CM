@@ -1,0 +1,4 @@
+{
+  "probabilities": [0.8, 0.25, 0.5],
+  "fallbacks": [false, false, true]
+}

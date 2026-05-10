@@ -15,14 +15,20 @@ def test_fingerprint_is_order_stable():
     assert len(a.fingerprint()) == 16
 
 
-def test_path_uses_namespace_relative_parts_and_fingerprint(tmp_path: Path):
+def test_path_uses_namespace_relative_parts_without_fingerprint(tmp_path: Path):
     key = ArtifactKey("hidden", ("qwen", "nback"), {"layer": 3})
-    assert key.path(tmp_path, ext=".pt") == tmp_path / "hidden" / "qwen" / "nback" / f"{key.fingerprint()}.pt"
+    assert key.path(tmp_path, ext=".pt") == tmp_path / "hidden" / "qwen" / "nback.pt"
+
+
+def test_fingerprinted_path_preserves_old_layout(tmp_path: Path):
+    key = ArtifactKey("hidden", ("qwen", "nback"), {"layer": 3})
+    assert key.fingerprinted_path(tmp_path, ext=".pt") == tmp_path / "hidden" / "qwen" / "nback" / f"{key.fingerprint()}.pt"
 
 
 def test_write_artifact_writes_payload_and_sidecar(tmp_path: Path):
     key = ArtifactKey("generate", ("qwen",), {"seed": 1})
     path = write_artifact(key, tmp_path, b"payload", ext=".jsonl")
+    assert path == tmp_path / "generate" / "qwen.jsonl"
     assert path.read_bytes() == b"payload"
     sidecar = json.loads(key.sidecar_path(tmp_path).read_text(encoding="utf-8"))
     assert sidecar["fingerprint"] == key.fingerprint()

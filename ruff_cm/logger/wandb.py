@@ -1,14 +1,78 @@
-import os
+from __future__ import annotations
+
+import json
 import logging
-from pathlib import Path
+import os
 from abc import ABCMeta, abstractmethod
+from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
-import wandb
-# import neptune.new as neptune
+
+from ruff_cm.experimenter.io import from_portable_relpath, portable_relpath
 
 RECORD_INTERVAL = 100
-WEIGHTS_INTERVAL = ([0, 10, 100, 1000, 5000] + [10000 * i for i in range(1, 6)] +
-                    [100000 * i for i in range(1, 11)])
+WEIGHTS_INTERVAL = [0, 10, 100, 1000, 5000] + [10000 * i for i in range(1, 6)] + [100000 * i for i in range(1, 11)]
+
+
+def _import_wandb():
+    import wandb
+
+    return wandb
+
+
+class WandbLogger:
+    def __init__(self, run=None, *, base_dir: Path | str | None = None):
+        self.run = run
+        self.base_dir = Path(base_dir) if base_dir is not None else None
+
+    @classmethod
+    def start(cls, *, project: str, run_name: str, config: dict, base_dir: Path | str | None = None) -> "WandbLogger":
+        run = _import_wandb().init(project=project, id=run_name, name=run_name, config=config, resume="allow")
+        return cls(run, base_dir=base_dir)
+
+    @classmethod
+    def resume(cls, *, project: str, run_name: str, base_dir: Path | str | None = None) -> "WandbLogger":
+        run = _import_wandb().init(project=project, id=run_name, resume="must")
+        return cls(run, base_dir=base_dir)
+
+    @property
+    def config(self) -> dict:
+        return dict(self.run.config)
+
+    def log(self, metrics: dict, *, step: int | None = None) -> None:
+        self.run.log(metrics, step=step)
+
+    def set_summary(self, metrics: dict) -> None:
+        for key, value in metrics.items():
+            self.run.summary[key] = value
+
+    def record_ckpt(self, ckpt_path: Path, *, extras: dict | None = None) -> None:
+        run_dir = self.base_dir or Path(self.run.dir)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        payload = {"ckpt_rel": portable_relpath(Path(ckpt_path), run_dir)}
+        if extras:
+            payload.update(extras)
+        (run_dir / "latest.json").write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+        for key, value in payload.items():
+            self.run.summary[key] = value
+
+    def get_ckpt(self) -> Path | None:
+        run_dir = self.base_dir or Path(self.run.dir)
+        latest_path = run_dir / "latest.json"
+        if not latest_path.exists():
+            return None
+        payload = json.loads(latest_path.read_text(encoding="utf-8"))
+        return from_portable_relpath(payload["ckpt_rel"], run_dir)
+
+    def hf_report_to(self) -> list[str]:
+        return ["wandb"]
+
+    def hf_callbacks(self) -> list:
+        from transformers.integrations import WandbCallback
+
+        return [WandbCallback()]
+
+    def finish(self) -> None:
+        self.run.finish()
 
 
 class ABCLogger(metaclass=ABCMeta):
@@ -34,7 +98,6 @@ class ABCLogger(metaclass=ABCMeta):
 
 
 class DummyLogger(ABCLogger):
-    """a dummy logger that does nothing"""
     def __init__(self, *args):
         pass
 
@@ -52,15 +115,15 @@ class DummyLogger(ABCLogger):
 
 
 class Logger(ABCLogger):
-    """a wrapper for a python logging console handler"""
+    """Console scalar logger kept for the historical `ruff_cm.logger.Logger` import."""
+
     def __init__(self, logger_name="Iter", record_interval=RECORD_INTERVAL):
         self.record_interval = record_interval
         self.name = logger_name
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging.INFO)
         console_handler = logging.StreamHandler()
-        console_handler_format = '%(message)s'
-        console_handler.setFormatter(logging.Formatter(console_handler_format))
+        console_handler.setFormatter(logging.Formatter("%(message)s"))
         self.logger.addHandler(console_handler)
 
     def log_metrics(self, metrics, name, i_iter):
@@ -74,18 +137,15 @@ class Logger(ABCLogger):
         if i_iter % self.record_interval == 0:
             for name, param in model.named_parameters():
                 if "weight" in name:
-                    flatten_weights = param.view(-1)
-                    self.logger.debug(f"{self.name} {i_iter} - {name}: {flatten_weights}")
+                    self.logger.debug(f"{self.name} {i_iter} - {name}: {param.view(-1)}")
 
     def finish(self):
-        """remove all handlers and close the logger"""
-        for handler in self.logger.handlers:
+        for handler in list(self.logger.handlers):
             handler.close()
             self.logger.removeHandler(handler)
 
 
 class TensorBoardLogger(ABCLogger):
-    """A thin wrapper for SummaryWriter"""
     def __init__(self, path, record_interval=RECORD_INTERVAL):
         self.record_interval = record_interval
         self.logger = SummaryWriter(path)
@@ -99,12 +159,10 @@ class TensorBoardLogger(ABCLogger):
         self.logger.add_hparams(hparam_dict, metric_dict)
 
     def log_weights(self, model, i_iter):
-        """split step to be the index of my arbitrary record points"""
         if self.logger is not None and i_iter in self.weights_record_points:
             for name, param in model.named_parameters():
                 if "weight" in name:
-                    i = self.weights_record_points.index(i_iter)
-                    self.logger.add_histogram(name, param, i)
+                    self.logger.add_histogram(name, param, self.weights_record_points.index(i_iter))
 
     def finish(self):
         self.logger.flush()
@@ -112,19 +170,14 @@ class TensorBoardLogger(ABCLogger):
 
 
 class WandBLogger(ABCLogger):
-    """The logic of WandBLogger is very different from the other loggers, since we use cross validation.
-    So, each run contains all folds (inner or outer).
-    If different folds are different runs, it would be hard to aggregate the results, and a cluttered dashboard.
+    """Legacy cross-validation WandB logger with lazy wandb import."""
 
-    We have to define custom metrics, and log them at the end of each fold.
-    https://docs.wandb.ai/guides/track/log/customize-logging-axes
-    """
     def __init__(self, config, name, record_interval):
         self.record_interval = record_interval
         self.weights_record_points = WEIGHTS_INTERVAL
         self.logger_name = name
         self.fold_info = self._get_fold_info(config)
-
+        wandb = _import_wandb()
         wandb.define_metric(f"Loss/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
         wandb.define_metric(f"Accuracy/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
         wandb.define_metric(f"ValLoss/{self.fold_info}*", step_metric=f"Epoch/{self.fold_info}")
@@ -138,7 +191,6 @@ class WandBLogger(ABCLogger):
         outer_fold = config.get("OUTER_FOLD")
         sub = config.get("SUB")
         trainer = config.get("TRAINER")
-
         fold_info = ""
         if sub is not None and "sub" in trainer.lower():
             fold_info += f"sub{sub}/"
@@ -149,77 +201,41 @@ class WandBLogger(ABCLogger):
         return fold_info
 
     def log_metrics(self, metrics, name, i_iter):
-        """
-        :param metrics: a value
-        :param name: the name of the metric
-        :param i_iter: the step of the metric
-        """
         if i_iter % self.record_interval == 0:
-            wandb.log({f"{name}/{self.fold_info}": metrics,
-                       f"{self.logger_name}/{self.fold_info}": i_iter})
+            _import_wandb().log({f"{name}/{self.fold_info}": metrics, f"{self.logger_name}/{self.fold_info}": i_iter})
 
     def log_hparams(self, hparam_dict, metric_dict):
-        """we already log hparams in the beginning of each run, so we don't need to log it again"""
-        fold_metric_dict = {f"{key}/{self.fold_info}": value for key, value in metric_dict.items()}
-        wandb.summary.update(fold_metric_dict)
+        _import_wandb().summary.update({f"{key}/{self.fold_info}": value for key, value in metric_dict.items()})
 
     def log_weights(self, model, i_iter):
         if i_iter in self.weights_record_points:
+            wandb = _import_wandb()
             for name, param in model.named_parameters():
                 if "weight" in name:
-                    i = self.weights_record_points.index(i_iter)
-                    wandb.log({f"{name}/{self.fold_info}": wandb.Histogram(param.detach().cpu().numpy().flatten()),
-                               f"{self.logger_name}/{self.fold_info}": i})
+                    step = self.weights_record_points.index(i_iter)
+                    values = param.detach().cpu().numpy().flatten()
+                    weight_key = f"{name}/{self.fold_info}"
+                    step_key = f"{self.logger_name}/{self.fold_info}"
+                    wandb.log({weight_key: wandb.Histogram(values), step_key: step})
 
     def finish(self):
-        """we don't need to do anything"""
         pass
 
 
 def wandb_run_trainer(trainer, config, project_name, config_file, silent=True, default_log_dir=False):
-    """https://github.com/wandb/wandb/issues/4223#issuecomment-1236304565"""
-    trainer.logger_type = 'wandb'
+    """Run the historical trainer wrapper inside a WandB run."""
+    trainer.logger_type = "wandb"
     if default_log_dir:
         log_dir = None
         log_internal = None
     else:
         log_dir = config.get("LOG_CACHE_DIR", os.getcwd())
-        log_internal = str(Path(os.getcwd()) / 'wandb' / 'null')
-
+        log_internal = str(Path(os.getcwd()) / "wandb" / "null")
+    wandb = _import_wandb()
     wandb.login(key=os.environ["WANDB_KEY"])
-    with wandb.init(project=project_name, name=config_file.replace('.yml', ''), group=config_file.replace('.yml', ''),
-                    config=config, dir=log_dir, settings=wandb.Settings(
-                _disable_stats=True, _disable_meta=True, disable_code=True, disable_git=True, silent=silent,
-                # log_internal=str(Path(__file__).parent / 'wandb' / 'null')),
-                log_internal=log_internal)):
+    with wandb.init(project=project_name, name=config_file.replace(".yml", ""), group=config_file.replace(".yml", ""),
+                    config=config, dir=log_dir, settings=wandb.Settings(_disable_stats=True, _disable_meta=True,
+                    disable_code=True, disable_git=True, silent=silent, log_internal=log_internal)):
         metrics = trainer.run()
         wandb.summary.update(metrics)
     return metrics.get("test_nll_mean", metrics.get("val_nll_mean", -1))
-
-# class NeptuneLogger(ABCLogger):
-#     # A thin wrapper for Neptune's logger
-#     def __init__(self, logger_info, neptune_project, expt_name,
-#                  params, tags):
-#         if logger_info is not None:
-#             # Reload existing logger
-#             expt_id = logger_info['id']
-#             self.logger = neptune.init(project=neptune_project, run=expt_id)
-#             self.is_new = False
-#         else:
-#             self.logger = neptune.init(project=neptune_project, name=expt_name)
-#             self.logger['parameters'] = params
-#             self.logger['sys/tags'].add(tags)
-#             self.info = self.logger.fetch()['sys']
-#             self.is_new = True
-#
-#     def log_metrics(self, metrics, name, epoch, epoch_end=False,
-#                     iteration=None, anneal_param=None):
-#         for key, val in metrics.items():
-#             self.logger[f'{name}_{key}'].log(step=epoch, value=val)
-#         if epoch_end:
-#             self.logger['iteration'].log(step=epoch, value=iteration)
-#             self.logger['anneal_param'].log(step=epoch, value=anneal_param)
-#
-#     def log_sample_output(self, fig, epoch):
-#         assign_key = f'model_outputs/epoch{epoch}'
-#         self.logger[assign_key].log(fig)

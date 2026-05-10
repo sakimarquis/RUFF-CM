@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, runtime_checkable
 
+import torch
+
 
 @dataclass(frozen=True)
 class Message:
@@ -15,6 +17,9 @@ class GenerateResult:
     text: str
     finish_reason: str
     raw: dict | None = None
+    thinking_tokens: int | None = None
+    max_thinking_tokens: int | None = None
+    thinking_truncated: bool | None = None
 
 
 @dataclass
@@ -62,6 +67,42 @@ class Scorer(Protocol):
     capabilities: frozenset[str]
 
     def score_choices(self, messages: list[Message], choice_set: Any) -> ChoiceScores: ...
+
+
+@runtime_checkable
+class BinaryScorer(Protocol):
+    name: str
+    capabilities: frozenset[str]
+
+    async def score_binary(
+        self,
+        messages_list: list[list[Message]],
+        *,
+        thinking_budget: int | None = None,
+    ) -> tuple[torch.Tensor, int]: ...
+
+    def score_binary_sync(
+        self,
+        messages_list: list[list[Message]],
+        *,
+        thinking_budget: int | None = None,
+    ) -> tuple[torch.Tensor, int]: ...
+
+    async def score_binary_with_shared_thinking(
+        self,
+        thinking_messages: list[Message],
+        messages_list: list[list[Message]],
+        *,
+        thinking_budget: int | None = None,
+    ) -> tuple[torch.Tensor, int]: ...
+
+    def score_binary_with_shared_thinking_sync(
+        self,
+        thinking_messages: list[Message],
+        messages_list: list[list[Message]],
+        *,
+        thinking_budget: int | None = None,
+    ) -> tuple[torch.Tensor, int]: ...
 
 
 @runtime_checkable

@@ -93,3 +93,99 @@ def test_hf_generate_stop_trim_sets_stop_finish_reason(monkeypatch):
 
     assert result.text == "answer"
     assert result.finish_reason == "stop"
+
+
+class FakeThinkingTokenizer:
+    pad_token = "<pad>"
+    pad_token_id = 0
+    eos_token = "<eos>"
+    eos_token_id = 99
+    chat_template = "thinking-template"
+    name_or_path = "Qwen/Qwen3-0.6B"
+
+    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True, enable_thinking=False):
+        if messages and "reasoning_content" in messages[-1]:
+            assistant = messages[-1]
+            return f"user ___RUFF_PROMPT_PROBE___<think>{assistant['reasoning_content']}</think>{assistant['content']}"
+        return "prompt <think>" if enable_thinking else "prompt"
+
+    def encode(self, text, add_special_tokens=False):
+        table = {"<think>": [10], "</think>": [11], "A": [5], "B": [6], "Yes": [7], "No": [8]}
+        return table.get(text, [1])
+
+    def __call__(self, texts, return_tensors="pt", padding=False):
+        torch = pytest.importorskip("torch")
+        batch = texts if isinstance(texts, list) else [texts]
+        encoded = [[1, 10] if "<think>" in text else [1] for text in batch]
+        width = max(len(row) for row in encoded)
+        input_ids = torch.tensor([[self.pad_token_id] * (width - len(row)) + row for row in encoded])
+        attention_mask = torch.tensor([[0] * (width - len(row)) + [1] * len(row) for row in encoded])
+        return SimpleNamespace(input_ids=input_ids, attention_mask=attention_mask)
+
+    def decode(self, token_ids, skip_special_tokens=True):
+        pieces = {11: "</think>", 20: "hidden", 30: "answer", 99: ""}
+        return "".join(pieces.get(int(token_id), "") for token_id in token_ids)
+
+
+class FakeThinkingModel:
+    def __init__(self):
+        torch = pytest.importorskip("torch")
+        self.device = torch.device("cpu")
+        self.generate_calls = []
+        self.forward_calls = 0
+
+    def eval(self):
+        return self
+
+    def generate(self, **kwargs):
+        torch = pytest.importorskip("torch")
+        self.generate_calls.append(kwargs)
+        input_ids = kwargs["input_ids"]
+        logits_processor = kwargs.get("logits_processor") or []
+        if logits_processor:
+            output_ids = torch.cat([input_ids, torch.tensor([[20, 11]])], dim=1)
+            scores = torch.zeros((input_ids.shape[0], 128))
+            scores[:, 5] = 5.0
+            scores[:, 6] = 1.0
+            for processor in logits_processor:
+                scores = processor(output_ids, scores)
+            return output_ids
+        if len(self.generate_calls) == 1:
+            return torch.cat([input_ids, torch.tensor([[20, 11, 99]])], dim=1)
+        return torch.cat([input_ids, torch.tensor([[30]])], dim=1)
+
+    def __call__(self, **kwargs):
+        self.forward_calls += 1
+        raise AssertionError("thinking score_choices should use captured logits before fallback forward")
+
+
+def _fake_thinking_backend(**kwargs):
+    backend = HfBackend("Qwen/Qwen3-0.6B", dtype="float32", device="cpu", **kwargs)
+    backend._tokenizer = FakeThinkingTokenizer()
+    backend._model = FakeThinkingModel()
+    return backend
+
+
+def test_hf_generate_thinking_two_stage_populates_metadata():
+    backend = _fake_thinking_backend(enable_thinking=True, max_thinking_tokens=1, max_answer_tokens=3)
+
+    result = backend.generate([Message("user", "answer")], max_tokens=3)
+
+    assert result.text == "answer"
+    assert result.thinking_tokens == 1
+    assert result.max_thinking_tokens == 1
+    assert result.thinking_truncated is True
+    assert len(backend._model.generate_calls) == 2
+    assert backend._model.generate_calls[1]["input_ids"][0, -1].item() == 11
+
+
+def test_hf_score_choices_thinking_captures_post_close_logits_without_forward_fallback():
+    backend = _fake_thinking_backend(enable_thinking=True, max_thinking_tokens=8)
+    choice_set = ChoiceSet(backend._tokenizer, ["A", "B"])
+
+    scores = backend.score_choices([Message("user", "A or B?")], choice_set)
+
+    assert scores.complete is True
+    assert scores.fallback_count == 0
+    assert scores.scores["A"] > scores.scores["B"]
+    assert backend._model.forward_calls == 0
