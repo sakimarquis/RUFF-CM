@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+import ruff_cm.llm.extract_hiddens.sglang as sglang
 from ruff_cm.llm.backends import Message
 from ruff_cm.llm.extract_hiddens.capture import CaptureMode, CaptureSpec
 from ruff_cm.llm.extract_hiddens.sglang import SglangConfig, SglangHiddenReader
@@ -43,8 +44,6 @@ def test_sglang_reader_applies_prefix_cache_offset(monkeypatch):
                 }
             ]
         )
-
-    import ruff_cm.llm.extract_hiddens.sglang as sglang
 
     monkeypatch.setattr(sglang.httpx, "post", fake_post)
     cfg = SglangConfig("http://x:8080", api_key="EMPTY", prefix_cache_offsets={"cache-a": 2})

@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 from ruff_cm.configs.thinking import ThinkingConfig
-from ruff_cm.llm.backends.families import is_gemma3_family, is_gemma4_family, is_qwen3_thinking, uses_harmony_style
+from ruff_cm.llm.families import ModelFamily, ThinkingProtocolSpec, identify_family
 
 
 _PROMPT_PROBE = "___RUFF_PROMPT_PROBE___"
@@ -43,32 +43,28 @@ class ThinkingProtocol:
 def resolve_thinking_protocol(tokenizer: Any, cfg: ThinkingConfig) -> ThinkingProtocol:
     """Derive marker IDs and budget semantics from an HF tokenizer or processor."""
 
-    model_id = str(getattr(tokenizer, "name_or_path", "") or "")
-    if _is_gemma4_runtime(tokenizer, model_id):
+    family = identify_family(tokenizer)
+    if _is_gemma4_runtime(tokenizer, family):
         return _resolve_gemma4_protocol(tokenizer, cfg)
 
-    family = _family_label(model_id)
+    spec = _thinking_spec(family)
     try:
-        return _resolve_template_text_protocol(tokenizer, cfg, family=family)
+        return _resolve_template_text_protocol(tokenizer, cfg, family=spec.family_label)
     except (TypeError, ValueError, AttributeError):
-        if family in {"gemma3", "harmony"}:
-            return _resolve_literal_text_protocol(tokenizer, cfg, family=family)
+        if spec.allow_literal_fallback or spec.marker_style == "literal_text":
+            return _resolve_literal_text_protocol(tokenizer, cfg, family=spec.family_label)
         raise
 
 
-def _family_label(model_id: str) -> str:
-    if is_qwen3_thinking(model_id):
-        return "qwen3-thinking"
-    if is_gemma3_family(model_id):
-        return "gemma3"
-    if uses_harmony_style(model_id):
-        return "harmony"
-    return "qwen3-thinking"
+def _thinking_spec(family: ModelFamily) -> ThinkingProtocolSpec:
+    if family.thinking_protocol is None:
+        raise ValueError(f"model family {family.id!r} does not define a thinking protocol")
+    return family.thinking_protocol
 
 
-def _is_gemma4_runtime(tokenizer: Any, model_id: str) -> bool:
+def _is_gemma4_runtime(tokenizer: Any, family: ModelFamily) -> bool:
     template = str(getattr(tokenizer, "chat_template", "") or "")
-    return is_gemma4_family(model_id) or _GEMMA_THOUGHT_CLOSE in template or "<|channel>thought" in template
+    return family.id == "gemma4" or _GEMMA_THOUGHT_CLOSE in template or "<|channel>thought" in template
 
 
 def _resolve_template_text_protocol(tokenizer: Any, cfg: ThinkingConfig, *, family: str) -> ThinkingProtocol:

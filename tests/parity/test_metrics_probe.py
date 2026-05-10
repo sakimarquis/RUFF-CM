@@ -1,10 +1,10 @@
 import numpy as np
 import torch
 
+from ruff_cm.metrics.probe import LinearProbe, LogisticProbe, load_classifiers, make_classifier, save_classifiers, train_probes_per_layer
+
 
 def test_linear_probe_matches_closed_form_ridge_and_round_trips(tmp_path):
-    from ruff_cm.metrics.probe import LinearProbe, load_classifiers, save_classifiers
-
     x = torch.tensor([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], dtype=torch.float32)
     y = torch.tensor([0.0, 1.0, 2.0, 3.0], dtype=torch.float32)
     probe = LinearProbe(alpha=1.0, device="cpu").fit(x, y)
@@ -24,8 +24,6 @@ def test_linear_probe_matches_closed_form_ridge_and_round_trips(tmp_path):
 
 
 def test_probe_factory_and_per_layer_training():
-    from ruff_cm.metrics.probe import LinearProbe, LogisticProbe, make_classifier, train_probes_per_layer
-
     hiddens = torch.tensor(
         [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],

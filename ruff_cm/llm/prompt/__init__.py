@@ -16,11 +16,12 @@ from .template import (
     detect_bos_prefix,
     locate_message,
 )
-from .tokenize import find_subsequences, tokenize_with_loss_mask
+from .tokenize import build_token_context, find_subsequences, tokenize_with_loss_mask
 
 __all__ = [
     "Message",
     "assistant_header",
+    "build_token_context",
     "compose_preamble",
     "compute_encoding_offset",
     "detect_assistant_suffix",

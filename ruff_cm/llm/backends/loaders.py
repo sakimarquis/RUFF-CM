@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 import torch
 
-from .families import is_gemma3_family, is_gemma3_vlm, is_gemma4_family, is_mistral3_family, uses_processor_renderer
+from ruff_cm.llm.families import identify_family
 
 
 @dataclass(frozen=True)
@@ -154,7 +154,8 @@ def print_device_map(model: Any) -> None:
 
 def _load_transformers_model(cfg: LoaderConfig) -> tuple[Any, Any]:
     tfm = _load_transformers_classes()
-    renderer_cls = tfm.AutoProcessor if uses_processor_renderer(cfg.model_id) else tfm.AutoTokenizer
+    family = identify_family(cfg.model_id)
+    renderer_cls = tfm.AutoProcessor if family.renderer == "processor" else tfm.AutoTokenizer
     renderer = renderer_cls.from_pretrained(cfg.model_id, trust_remote_code=cfg.trust_remote_code)
     model_cls = _model_class(tfm, cfg.model_id)
     model_kwargs = {
@@ -178,7 +179,7 @@ def _load_unsloth(cfg: LoaderConfig) -> tuple[Any, Any]:
 
 
 def _tokenizer_like(renderer: Any, model_id: str) -> Any:
-    if uses_processor_renderer(model_id):
+    if identify_family(model_id).renderer == "processor":
         return ProcessorTokenizerAdapter(renderer)
     return getattr(renderer, "tokenizer", renderer)
 
@@ -198,13 +199,8 @@ def _load_transformers_classes() -> SimpleNamespace:
 
 
 def _model_class(tfm: SimpleNamespace, model_id: str):
-    if is_gemma4_family(model_id):
-        return tfm.AutoModelForMultimodalLM
-    if is_mistral3_family(model_id):
-        return tfm.Mistral3ForConditionalGeneration
-    if is_gemma3_vlm(model_id):
-        return tfm.AutoModelForImageTextToText
-    return tfm.AutoModelForCausalLM
+    model_class_name = identify_family(model_id).loader_hints.model_class
+    return getattr(tfm, model_class_name) if model_class_name is not None else tfm.AutoModelForCausalLM
 
 
 def _resolve_torch_dtype(model_id: str, dtype: Any | str | None, tfm: SimpleNamespace):
@@ -219,12 +215,4 @@ def _resolve_torch_dtype(model_id: str, dtype: Any | str | None, tfm: SimpleName
 
 
 def _select_unsloth_loader_name(model_id: str) -> str:
-    normalized = model_id.lower()
-    fastmodel_markers = ("gemma-4-26b-a4b", "qwen3.6-35b-a3b")
-    if (
-        is_gemma3_family(model_id)
-        or is_mistral3_family(model_id)
-        or any(marker in normalized for marker in fastmodel_markers)
-    ):
-        return "FastModel"
-    return "FastLanguageModel"
+    return identify_family(model_id).loader_hints.unsloth_loader or "FastLanguageModel"

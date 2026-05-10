@@ -8,7 +8,7 @@ from ruff_cm.logger import ABCLogger, CsvLogger, Logger, WandBLogger, WandbLogge
 
 
 @pytest.mark.parity
-def test_logger_root_exports_new_and_legacy_names():
+def test_logger_root_exports_logger_names():
     assert CsvLogger is not None
     assert WandbLogger is not None
     assert make_logger(["noop"], project="proj", run_name="run", config={}, base_dir=".").get_ckpt() is None

@@ -17,9 +17,24 @@ class ArtifactKey:
     relative_parts: tuple[str, ...]
     identity_fields: dict[str, Any]
 
+    @property
+    def name(self) -> str:
+        return self.namespace
+
+    @property
+    def parts(self) -> tuple[str, ...]:
+        return self.relative_parts
+
+    @property
+    def params(self) -> dict[str, Any]:
+        return self.identity_fields
+
     def fingerprint(self) -> str:
         identity = _canonical_identity_json(self.identity_fields)
         return hashlib.sha256(identity.encode("utf-8")).hexdigest()[:16]
+
+    def stem(self, *, fingerprinted: bool = False) -> str:
+        return self.fingerprint() if fingerprinted else (self.relative_parts[-1] if self.relative_parts else self.namespace)
 
     def path(self, root: Path, ext: str = "") -> Path:
         path = root / self.namespace

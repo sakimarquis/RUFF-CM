@@ -20,7 +20,7 @@ def test_path_uses_namespace_relative_parts_without_fingerprint(tmp_path: Path):
     assert key.path(tmp_path, ext=".pt") == tmp_path / "hidden" / "qwen" / "nback.pt"
 
 
-def test_fingerprinted_path_preserves_old_layout(tmp_path: Path):
+def test_fingerprinted_path_uses_nested_fingerprint_layout(tmp_path: Path):
     key = ArtifactKey("hidden", ("qwen", "nback"), {"layer": 3})
     assert key.fingerprinted_path(tmp_path, ext=".pt") == tmp_path / "hidden" / "qwen" / "nback" / f"{key.fingerprint()}.pt"
 
@@ -36,9 +36,9 @@ def test_write_artifact_writes_payload_and_sidecar(tmp_path: Path):
 
 
 def test_read_artifact_strict_rejects_stale_sidecar(tmp_path: Path):
-    old = ArtifactKey("generate", ("qwen",), {"seed": 1})
+    stale_key = ArtifactKey("generate", ("qwen",), {"seed": 1})
     new = ArtifactKey("generate", ("qwen",), {"seed": 2})
-    write_artifact(old, tmp_path, b"payload", ext=".jsonl")
+    write_artifact(stale_key, tmp_path, b"payload", ext=".jsonl")
     stale_path = new.path(tmp_path, ext=".jsonl")
     stale_path.parent.mkdir(parents=True, exist_ok=True)
     stale_path.write_bytes(b"wrong")

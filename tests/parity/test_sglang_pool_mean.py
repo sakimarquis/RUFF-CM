@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import ruff_cm.llm.extract_hiddens.sglang as sglang
 from ruff_cm.llm.extract_hiddens.sglang import get_single_hidden_sglang
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sglang" / "hidden_response.json"
@@ -29,8 +30,6 @@ def test_get_single_hidden_sglang_mean_pools_span(monkeypatch):
     def fake_post(url, *, json, headers, timeout):
         calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
         return FakeResponse(payload)
-
-    import ruff_cm.llm.extract_hiddens.sglang as sglang
 
     monkeypatch.setattr(sglang.httpx, "post", fake_post)
 

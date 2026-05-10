@@ -1,9 +1,17 @@
 import torch
 
+from ruff_cm.metrics.geometry import (
+    compute_pairwise_cosine_similarity,
+    compute_rdm_layers,
+    compute_rule_axis,
+    linear_cka,
+    orthogonal_procrustes,
+    safe_normalize,
+    subspace_angles,
+)
+
 
 def test_geometry_import_surface_and_cka_sanity():
-    from ruff_cm.metrics.geometry import linear_cka, safe_normalize
-
     x = torch.tensor([[1.0, 2.0, 0.0], [0.0, 1.0, 3.0], [2.0, 0.0, 1.0], [4.0, 1.0, 2.0]])
 
     assert torch.isclose(safe_normalize(x).norm(dim=-1), torch.ones(x.shape[0])).all()
@@ -12,14 +20,6 @@ def test_geometry_import_surface_and_cka_sanity():
 
 
 def test_geometry_linear_algebra_shapes():
-    from ruff_cm.metrics.geometry import (
-        compute_pairwise_cosine_similarity,
-        compute_rdm_layers,
-        compute_rule_axis,
-        orthogonal_procrustes,
-        subspace_angles,
-    )
-
     centroids = torch.arange(24, dtype=torch.float32).reshape(3, 2, 4)
     assert compute_rdm_layers(centroids).shape == (2, 3, 3)
     assert compute_pairwise_cosine_similarity(centroids, layer_dim=1).shape == (2, 3, 3)

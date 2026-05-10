@@ -6,6 +6,8 @@ from typing import Any
 
 import numpy as np
 
+from ruff_cm.store.artifact import BundleCodec
+
 
 class ArtifactBundle:
     def __init__(self, root: Path):
@@ -29,3 +31,11 @@ class ArtifactBundle:
     def open_memmap(self, name: str, *, dtype, shape: tuple[int, ...], mode: str = "r"):
         self.root.mkdir(parents=True, exist_ok=True)
         return np.memmap(self.member_path(name), dtype=dtype, mode=mode, shape=shape)
+
+    def write(self, payload: dict[str, Any], codecs: dict[str, Any]) -> Path:
+        codec = BundleCodec(codecs)
+        codec.write_to(payload, self.root)
+        return self.root
+
+    def read(self, codecs: dict[str, Any]) -> dict[str, Any]:
+        return BundleCodec(codecs).read_from(self.root)

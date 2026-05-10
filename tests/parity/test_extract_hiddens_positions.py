@@ -6,6 +6,7 @@ from ruff_cm.llm.extract_hiddens.positions import (
     find_think_boundaries,
     last_assistant_span,
 )
+from ruff_cm.llm.extract_hiddens.capture import CaptureResult
 
 
 class ToyTokenizer:
@@ -65,6 +66,4 @@ def test_extract_probe_positions_applies_prefix_cache_offset():
 
 
 def test_capture_module_reexports_capture_result_without_import_cycle():
-    from ruff_cm.llm.extract_hiddens.capture import CaptureResult
-
     assert CaptureResult.__name__ == "CaptureResult"

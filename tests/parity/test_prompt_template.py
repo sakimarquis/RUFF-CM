@@ -6,7 +6,7 @@ from ruff_cm.llm.prompt.template import (
     detect_bos_prefix,
     locate_message,
 )
-from ruff_cm.llm.spans import assistant_header as legacy_assistant_header
+from ruff_cm.llm.spans import assistant_header as span_assistant_header
 
 
 class TemplateTokenizer:
@@ -35,7 +35,7 @@ def test_prompt_template_exports_existing_span_helpers():
 
     full_ids, start, end = locate_message(tokenizer, messages, target_idx=1)
 
-    assert assistant_header(tokenizer, tokenize=True) == legacy_assistant_header(tokenizer, tokenize=True)
+    assert assistant_header(tokenizer, tokenize=True) == span_assistant_header(tokenizer, tokenize=True)
     assert "answer" in tokenizer.decode(full_ids[start:end])
 
 

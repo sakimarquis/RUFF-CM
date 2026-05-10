@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+
 from ruff_cm.eval import run_accuracy_benchmark, stratified_sample_hf
 from ruff_cm.llm.backends import GenerateResult, Message
 
@@ -60,7 +62,6 @@ def test_run_accuracy_benchmark_builds_pr_style_trials():
 
 def test_stratified_sample_hf_matches_pr_shuffle_then_take_order():
     data = [{"cat": "x", "id": i} for i in range(4)] + [{"cat": "y", "id": i} for i in range(10, 14)]
-    import random
 
     rng = random.Random(13)
     actual = stratified_sample_hf(data, ["x", "y"], lambda row: row["cat"], 2, rng)

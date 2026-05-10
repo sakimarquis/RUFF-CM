@@ -8,6 +8,7 @@ from .jsonl import (
     init_benchmark_trial_jsonls,
     init_jsonl,
     init_trial_jsonl,
+    JsonlCodec,
     read_trials,
 )
 from .sampling import stratified_sample_hf
@@ -31,6 +32,7 @@ __all__ = [
     "init_benchmark_trial_jsonls",
     "init_jsonl",
     "init_trial_jsonl",
+    "JsonlCodec",
     "make_sample_id",
     "mc_answer",
     "read_trials",

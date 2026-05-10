@@ -24,10 +24,10 @@ def test_write_and_read_cache_metadata(tmp_path):
     assert read_cache_metadata(payload) == {"model": "qwen", "seed": 0}
 
 
-def test_read_cache_metadata_accepts_legacy_appended_sidecar(tmp_path):
+def test_read_cache_metadata_accepts_appended_sidecar(tmp_path):
     payload = tmp_path / "scores.json"
-    legacy_path = tmp_path / "scores.json.metadata.json"
-    legacy_path.write_text('{"model": "qwen"}', encoding="utf-8")
+    sidecar = tmp_path / "scores.json.metadata.json"
+    sidecar.write_text('{"model": "qwen"}', encoding="utf-8")
     assert read_cache_metadata(payload) == {"model": "qwen"}
 
 

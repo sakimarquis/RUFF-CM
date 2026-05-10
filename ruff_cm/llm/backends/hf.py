@@ -15,6 +15,7 @@ from ruff_cm.llm.inference.thinking import (
     recover_uncaptured_logits,
     resolve_thinking_protocol,
 )
+from ruff_cm.llm.families import identify_family
 from ruff_cm.llm.prompt.messages import to_chat_dicts
 
 from ..hooks import CaptureMode, HiddenCapture
@@ -236,7 +237,7 @@ class HfBackend:
         answer_budget = int(self.max_answer_tokens or max_tokens)
         inputs = self._encode_messages(messages, enable_thinking=True)
         processor = (
-            ThinkingBudgetProcessor(
+            self._thinking_budget_processor_cls()(
                 protocol,
                 prompt_len=int(inputs["input_ids"].shape[1]),
                 thinking_budget=budget,
@@ -300,7 +301,9 @@ class HfBackend:
         capture = _CapturePostThinkLogits(protocol.close_marker_ids, batch_size, prompt_width=prompt_width)
         processors = []
         if protocol.supports_forced_close:
-            processors.append(ThinkingBudgetProcessor(protocol, prompt_len=prompt_width, thinking_budget=thinking_budget))
+            processors.append(
+                self._thinking_budget_processor_cls()(protocol, prompt_len=prompt_width, thinking_budget=thinking_budget)
+            )
         processors.append(capture)
         output_ids = self._model.generate(
             **inputs,
@@ -323,7 +326,7 @@ class HfBackend:
         protocol = self._ensure_thinking()
         inputs = self._encode_messages(messages, enable_thinking=True)
         processor = (
-            ThinkingBudgetProcessor(
+            self._thinking_budget_processor_cls()(
                 protocol,
                 prompt_len=int(inputs["input_ids"].shape[1]),
                 thinking_budget=thinking_budget,
@@ -361,6 +364,7 @@ class HfBackend:
         return forced_ids, torch.cat([attention_mask, close_mask], dim=1)
 
     def _letter_result(self, logits, choices: list[str] | None = None, **metadata) -> GenerateResult:
+        # Keep this local: choice imports backend base types, and backends.__init__ imports HfBackend.
         from ruff_cm.llm.extract_answer.choice import build_letter_token_ids, compute_letter_log_probs
 
         letters = choices or [chr(ord("A") + index) for index in range(26)]
@@ -416,6 +420,10 @@ class HfBackend:
             self._thinking_protocol = resolve_thinking_protocol(self._tokenizer, cfg)
             self._thinking_codec = HfThinkingCodec(self._tokenizer, self._thinking_protocol)
         return self._thinking_protocol
+
+    def _thinking_budget_processor_cls(self):
+        family = identify_family(self._tokenizer)
+        return family.budget_processor or ThinkingBudgetProcessor
 
     def _effective_thinking_budget(self, thinking_budget: int | None) -> int:
         if thinking_budget is not None:

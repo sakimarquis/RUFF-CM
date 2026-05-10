@@ -72,7 +72,7 @@ def test_sparse_false_projects_selected_hidden_rows_through_lm_head():
     assert torch.allclose(actual[0], dense[0, [0, 2], :][:, token_ids])
 
 
-def test_old_positions_keyword_still_selects_query_logits():
+def test_positions_keyword_still_selects_query_logits():
     torch = pytest.importorskip("torch")
 
     class Model(torch.nn.Module):

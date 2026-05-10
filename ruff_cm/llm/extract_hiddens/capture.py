@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 import torch
 
+from ruff_cm.llm.backends.base import CaptureResult
 from ruff_cm.llm.extract_hiddens.hooks import UnsupportedArchitectureError, decoder_layers
-
-if TYPE_CHECKING:
-    from ruff_cm.llm.backends.base import CaptureResult
 
 
 class CaptureMode(Enum):
@@ -53,8 +51,6 @@ class HiddenCapture:
         self.handles.clear()
 
     def collect(self, token_ids: Any | None = None, logits: Any | None = None) -> CaptureResult:
-        from ruff_cm.llm.backends.base import CaptureResult
-
         selected: dict[int, Any] = {}
         valid_mask = None
         for layer_idx, hidden in self.hiddens.items():
@@ -127,8 +123,6 @@ def _move_tensor(tensor: Any, *, dtype: Any | None, device: Any | None) -> Any:
 
 def __getattr__(name: str) -> Any:
     if name == "CaptureResult":
-        from ruff_cm.llm.backends.base import CaptureResult
-
         return CaptureResult
     raise AttributeError(name)
 

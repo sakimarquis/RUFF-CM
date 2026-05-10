@@ -1,9 +1,9 @@
 import torch
 
+from ruff_cm.metrics.probe import ProbesByLayerResult, build_linear_layer_fit_cache, train_probes_per_layer
+
 
 def test_train_probes_per_layer_split_scores_and_best_layer():
-    from ruff_cm.metrics.probe import ProbesByLayerResult, train_probes_per_layer
-
     y = torch.linspace(-1.0, 1.0, 12)
     train_idx = torch.arange(0, 8)
     val_idx = torch.arange(8, 12)
@@ -25,8 +25,6 @@ def test_train_probes_per_layer_split_scores_and_best_layer():
 
 
 def test_train_probes_per_layer_external_eval_does_not_drive_selection():
-    from ruff_cm.metrics.probe import train_probes_per_layer
-
     y = torch.linspace(-1.0, 1.0, 12)
     train_idx = torch.arange(0, 8)
     val_idx = torch.arange(8, 12)
@@ -62,8 +60,6 @@ def test_train_probes_per_layer_external_eval_does_not_drive_selection():
 
 
 def test_linear_layer_fit_cache_reuses_svd_and_matches_scratch(monkeypatch):
-    from ruff_cm.metrics.probe import build_linear_layer_fit_cache, train_probes_per_layer
-
     generator = torch.Generator().manual_seed(0)
     hiddens = torch.randn(2, 20, 5, generator=generator)
     y = torch.randn(20, generator=generator)

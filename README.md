@@ -18,12 +18,12 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 ## Package Layout
 
 - `ruff_cm.llm`: backend protocols, API/HF adapters, choice scoring, hidden-state capture, and thinking-mode resolution.
-- `ruff_cm.experimenter`: legacy config-grid helpers plus explicit experiment-cell identity.
+- `ruff_cm.experimenter`: config-grid helpers plus explicit experiment-cell identity.
 - `ruff_cm.metrics`: statistics, plotting, behavioral metrics, representation geometry, and probe classifiers.
 - `ruff_cm.eval`: benchmark trial schemas, JSONL persistence, driver loops, finalizers, and sampling/generation helpers.
 - `ruff_cm.store`: content-addressed artifact keys with sidecar metadata checks.
 - `ruff_cm.task_protocol`: lightweight task interfaces shared by downstream experiments.
-- `ruff_cm.logger`, `ruff_cm.plotter`, `ruff_cm.nn_helper`, `ruff_cm.slurm`, `ruff_cm.utils`: older utility modules kept for downstream compatibility.
+- `ruff_cm.logger`, `ruff_cm.plotter`, `ruff_cm.nn_helper`, `ruff_cm.slurm`, `ruff_cm.utils`: stable utility modules used by downstream projects.
 
 ## LLM Toolkit
 
@@ -32,26 +32,30 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 - `ruff_cm.llm.backends`: `Message`, `GenerateResult`, `ChoiceScores`, `CaptureResult`, `Generator`, `Scorer`,
   `BinaryScorer`, `HiddenReader`, `ApiBackend`, `HfBackend`, `LoaderConfig`, `load_hf_model_and_renderer`, family predicates,
   `create_backend`, and `load_aliases`.
-- `ruff_cm.llm`: `ChoiceSet`, `CaptureMode`, `CaptureSpec`, `HiddenCapture`, `ThinkingConfig`, and
+- `ruff_cm.llm.families`: `ModelFamily`, `identify_family`, and the registry of model-level renderer, thinking,
+  terminal-answer, role-marker, and loader-hint behavior used by backend compatibility predicates.
+- `ruff_cm.llm`: `ChoiceSet`, `CaptureMode`, `CaptureSpec`, `HiddenCapture`, `ThinkingConfig`, `TokenSpan`, and
   `resolve_thinking`.
-- `ruff_cm.llm.inference`: forward execution, KV-cache utilities, latent-thought generation, thinking-runtime
-  helpers, batch request scaffolding, and composable generation retry/parse drivers under one namespace.
+- `ruff_cm.llm.inference`: composable `generate(...)` runtime specs, forward execution, KV-cache utilities,
+  latent-thought generation, thinking-runtime helpers, batch request scaffolding, and generation retry/parse drivers.
 - `ruff_cm.llm.execution`: `forward_hidden_only`, `forward_query_logits`, and `forward_selected_logits` for
   query-position logits without forcing downstream code to materialize more tensor output than it needs.
 - `ruff_cm.llm.locator`: `BoundaryPlan` and token-position helpers for converting semantic boundaries into
   capture/query positions.
 - `ruff_cm.llm.extract_hiddens`: hidden-capture types, read-only forward hooks, output-side probe positions,
-  hidden aggregation, and compatibility shims for older capture/hook/locator paths.
+  hidden aggregation, and capture/hook/locator imports used by downstream projects.
 - `ruff_cm.llm.batch`: `RequestRecord`, `JobManifest`, and ordered result collection for provider batch adapters.
-- `ruff_cm.llm.spans`: compatibility imports backed by `ruff_cm.llm.prompt` for `assistant_header`,
+- `ruff_cm.llm.spans`: prompt-span imports backed by `ruff_cm.llm.prompt` for `assistant_header`,
   `locate_message`, `find_subsequences`, and `tokenize_with_loss_mask`.
 - `ruff_cm.llm.prompt`: `Message`, prompt composition helpers, chat-template introspection, and loss-mask
   tokenization helpers for chat-template-aware token span resolution.
+- `ruff_cm.llm.trajectory`: `Trajectory`, `Segment`, `TokenSpan`, and selector helpers for role, thinking,
+  visible-step, terminal-answer, hidden-capture, and logit positions over one prompt+response.
 - `ruff_cm.llm.extract_answer`: choice scoring with token variants, free-form JSON repair, float coercion,
   and terminal fixed-set answer extraction.
 - `ruff_cm.llm.inference.thinking`: tokenizer-derived thinking protocols, HF close-budget processors,
   post-`</think>` logits capture, and two-stage API/HF thinking flows.
-- `ruff_cm.llm.parsing`: compatibility imports backed by `ruff_cm.llm.extract_answer.parsing`.
+- `ruff_cm.llm.parsing`: parsing imports backed by `ruff_cm.llm.extract_answer.parsing`.
 - `ruff_cm.llm.steering`: write-side forward hooks for subspace subtraction, norm-matched steering, and
   activation patching during inference.
 - `ruff_cm.llm.hooks_runtime`: forward-hook hidden capture, layerwise position extraction, write-hook mutation, and subspace subtraction helpers.
@@ -142,7 +146,7 @@ for cell in cells:
 ## Logger Helpers
 
 `ruff_cm.logger` provides a small run-logging protocol plus concrete WandB, CSV, multi-sink, and no-op loggers.
-The package keeps the historical console/TensorBoard/WandB names importable while adding:
+The package exports console/TensorBoard/WandB names plus:
 
 - `CsvLogger(out_dir)` — appends scalar rows to `metrics.csv`, widens headers when new metric keys appear, writes summaries to `summary.json`, and records the latest checkpoint in `latest.json`.
 - `WandbLogger` — logs scalar events and checkpoint manifests through an active WandB run.
@@ -154,9 +158,10 @@ The package keeps the historical console/TensorBoard/WandB names importable whil
 ## Artifact Identity
 
 `ruff_cm.store.ArtifactKey` keeps caller-controlled artifact paths while preserving opt-in identity fingerprints.
-`ruff_cm.store.cache_metadata` provides sibling `.metadata.json` sidecars for stale-cache checks.
-`ruff_cm.store.prefix_cache` provides tuple-prefix JSON codecs and trajectory reconstruction helpers.
-`ruff_cm.store.ArtifactBundle` stores metadata plus named bundle members such as memmaps.
+`ruff_cm.store.Artifact`, `Manifest`, and the built-in codecs provide one filesystem protocol for JSON, JSONL, npy,
+joblib, memmap, prefix-cache, and bundle payloads with sibling `.metadata.json` sidecars.
+`ruff_cm.store.cache_metadata`, `ruff_cm.store.prefix_cache`, and `ruff_cm.store.ArtifactBundle` remain importable
+adapters over the shared protocol.
 
 ```python
 from pathlib import Path
@@ -173,7 +178,7 @@ assert key.fingerprinted_path(Path("artifacts"), ext=".bin").name == f"{key.fing
 ## Plotter Helpers
 
 `ruff_cm.metrics.plotting` provides matplotlib styling and plot templates shared by downstream repos.
-The old `ruff_cm.plotter` path re-exports the same helpers for compatibility:
+`ruff_cm.plotter` re-exports the same helpers:
 
 - `set_mpl(size=8)` — publication defaults (Arial, no top/right spines, dpi=600).
 - `save_fig(fig, path, fmt=None, dpi=300)` — tight-layout save + close.
@@ -185,7 +190,7 @@ The old `ruff_cm.plotter` path re-exports the same helpers for compatibility:
 ## Stats Helpers
 
 `ruff_cm.metrics.stats` provides small statistical helpers for analysis and plotting.
-The old `ruff_cm.stats` path re-exports the same helpers for compatibility:
+`ruff_cm.stats` re-exports the same helpers:
 
 - `format_pvalue(p, italic=False)` formats p-values using common reporting thresholds and LaTeX for very small values.
 - `mean_sem(data)` stacks per-key arrays and returns nan-aware mean and SEM dictionaries.
@@ -199,7 +204,10 @@ The old `ruff_cm.stats` path re-exports the same helpers for compatibility:
 
 - `behavioral`: SDT counts, meta-d prime dictionaries, Cohen's kappa, ECE, target-sequence and auto-monotonicity, and progress-drop scores.
 - `geometry`: linear CKA, subspace angles, Procrustes rotation, RDMs, cosine similarities, and PCA rule axes.
-- `probe`: torch-based linear/logistic/PCA probes, per-layer training, and classifier save/load helpers.
+- `probe`: a shared `Probe` protocol with Ridge, sklearn LBFGS logistic, torch LBFGS, torch C-sweep
+  logistic, PCA, and mean-difference probes; `ProbeConfig`, `SplitSpec`, `ParallelSpec`, and
+  `ProbeReport` define the layer-wise training surface, and `load_probe` dispatches from saved
+  `.metadata.json` sidecars while classifier helpers remain importable.
 
 ## Tests
 

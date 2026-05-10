@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
+
+from ruff_cm.store.artifact import JsonlCodec
 
 from .trial import Trial, validate_trial
 
@@ -13,9 +14,7 @@ def benchmark_trials_dir(root: str | Path, run_id: str) -> Path:
 
 
 def init_trial_jsonl(path: str | Path) -> None:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("", encoding="utf-8")
+    JsonlCodec().write_file([], path)
 
 
 def init_jsonl(path: str | Path) -> None:
@@ -45,11 +44,9 @@ def append_trials(path: str | Path, trials: Iterable[Mapping[str, Any] | Trial])
         return
     for row in rows:
         validate_trial(row)
-    with open(path, "a", encoding="utf-8") as handle:
-        for row in rows:
-            if isinstance(row["source"], str):
-                row["source"] = {"type": row["source"]}
-            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        if isinstance(row["source"], str):
+            row["source"] = {"type": row["source"]}
+    JsonlCodec().append_file(rows, path)
 
 
 def append_benchmark_trials(
@@ -77,8 +74,7 @@ def append_benchmark_trials(
 
 
 def read_trials(path: str | Path) -> list[dict[str, Any]]:
-    with open(path, "r", encoding="utf-8") as handle:
-        return [json.loads(line) for line in handle if line.strip()]
+    return JsonlCodec().read_file(path)
 
 
 __all__ = [
@@ -88,5 +84,6 @@ __all__ = [
     "init_benchmark_trial_jsonls",
     "init_jsonl",
     "init_trial_jsonl",
+    "JsonlCodec",
     "read_trials",
 ]

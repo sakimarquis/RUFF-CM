@@ -1,3 +1,20 @@
+from ruff_cm.store.artifact import (
+    Artifact,
+    BundleCodec,
+    Codec,
+    JoblibCodec,
+    JsonCodec,
+    JsonlCodec,
+    Manifest,
+    MemmapCodec,
+    NpyCodec,
+    PrefixCacheCodec,
+    is_fresh,
+    manifest_path,
+    payload_path,
+    read,
+    write,
+)
 from ruff_cm.store.artifact_key import ArtifactKey, StaleArtifactError, read_artifact, write_artifact
 from ruff_cm.store.bundle import ArtifactBundle
 from ruff_cm.store.cache_metadata import (
@@ -17,20 +34,35 @@ from ruff_cm.store.prefix_cache import (
 )
 
 __all__ = [
+    "Artifact",
     "ArtifactBundle",
     "ArtifactKey",
+    "BundleCodec",
+    "Codec",
+    "JoblibCodec",
+    "JsonCodec",
+    "JsonlCodec",
+    "Manifest",
+    "MemmapCodec",
+    "NpyCodec",
+    "PrefixCacheCodec",
     "StaleArtifactError",
     "StaleCacheError",
+    "is_fresh",
     "load_prefix_cache",
+    "manifest_path",
     "metadata_path",
     "metadata_fields_match",
+    "payload_path",
     "parse_prefix_key",
     "prefix_key",
+    "read",
     "read_artifact",
     "read_cache_metadata",
     "reconstruct_trajectory",
     "require_cache_metadata",
     "serialize_prefix_cache",
+    "write",
     "write_artifact",
     "write_cache_metadata",
 ]

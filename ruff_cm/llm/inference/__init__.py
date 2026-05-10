@@ -30,15 +30,22 @@ from .kvcache import (
 )
 from .latent import LatentThoughtResult, apply_alignment, compute_alignment_matrix, generate_latent_thoughts
 from .retry import is_transient_api_error, with_api_retry, with_oom_halving, with_parse_retry
+from .runtime import InferenceResult, generate
+from .specs import BudgetSpec, FinishReason, SamplingConfig, ScoringSpec
 from . import thinking
 
 __all__ = [
+    "BudgetSpec",
+    "FinishReason",
     "HybridCacheAdapter",
+    "InferenceResult",
     "JobManifest",
     "LatentThoughtResult",
     "ParseFailure",
     "ParseRunReport",
     "RequestRecord",
+    "SamplingConfig",
+    "ScoringSpec",
     "apply_alignment",
     "clone_kv",
     "compute_alignment_matrix",
@@ -48,6 +55,7 @@ __all__ = [
     "forward_query_logits",
     "forward_selected_logits",
     "forward_with_kv_delta",
+    "generate",
     "generate_latent_thoughts",
     "generate_and_parse",
     "is_hybrid_supported",

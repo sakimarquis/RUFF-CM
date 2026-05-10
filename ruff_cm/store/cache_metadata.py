@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ruff_cm.store.artifact import JsonCodec
+
 
 class StaleCacheError(RuntimeError):
     pass
@@ -13,7 +15,7 @@ def metadata_path(payload_path: Path) -> Path:
     return payload_path.with_suffix(".metadata.json")
 
 
-def _legacy_sidecar_path(payload_path: Path) -> Path:
+def _appended_sidecar_path(payload_path: Path) -> Path:
     return payload_path.with_name(f"{payload_path.name}.metadata.json")
 
 
@@ -21,16 +23,16 @@ def _read_metadata_path(payload_path: Path) -> Path:
     path = metadata_path(payload_path)
     if path.exists():
         return path
-    legacy_path = _legacy_sidecar_path(payload_path)
-    if legacy_path.exists():
-        return legacy_path
+    appended_path = _appended_sidecar_path(payload_path)
+    if appended_path.exists():
+        return appended_path
     return path
 
 
 def write_cache_metadata(payload_path: Path, metadata: dict[str, Any]) -> Path:
     path = metadata_path(payload_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(metadata, sort_keys=True, default=str), encoding="utf-8")
+    path.write_bytes(JsonCodec().encode(metadata))
     return path
 
 

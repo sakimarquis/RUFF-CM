@@ -3,10 +3,18 @@ import math
 import numpy as np
 from scipy.stats import norm
 
+from ruff_cm.metrics.behavioral import (
+    auto_monotonicity_score,
+    cohens_kappa,
+    compute_sdt,
+    expected_calibration_error,
+    meta_d_prime,
+    monotonicity_score,
+    progress_drop_score,
+)
+
 
 def test_compute_sdt_matches_hautus_loglinear_counts():
-    from ruff_cm.metrics.behavioral import compute_sdt
-
     out = compute_sdt(50, 50, 5, 95)
     hr_c = (50 + 0.5) / (100 + 1)
     far_c = (5 + 0.5) / (100 + 1)
@@ -22,8 +30,6 @@ def test_compute_sdt_matches_hautus_loglinear_counts():
 
 
 def test_expected_calibration_error_includes_right_edge():
-    from ruff_cm.metrics.behavioral import expected_calibration_error
-
     pred = np.array([0.0, 0.5, 1.0])
     actual = np.array([0.0, 0.0, 0.0])
 
@@ -31,14 +37,6 @@ def test_expected_calibration_error_includes_right_edge():
 
 
 def test_behavioral_import_surface_and_simple_scores():
-    from ruff_cm.metrics.behavioral import (
-        auto_monotonicity_score,
-        cohens_kappa,
-        meta_d_prime,
-        monotonicity_score,
-        progress_drop_score,
-    )
-
     assert cohens_kappa(np.array([0, 1, 1, 0]), np.array([0, 1, 0, 0])) == 0.5
     assert math.isclose(monotonicity_score(np.array([1.0, 3.0, 2.0]), np.array([1.0, 2.0, 3.0])), 0.5)
     assert math.isclose(auto_monotonicity_score(np.array([1.0, 2.0, 3.0])), 1.0)

@@ -10,7 +10,7 @@ class BinaryTokenizer:
         return {"yes": [0], "no": [1], " yes": [2], " no": [3]}[text]
 
 
-def old_score_binary_fixture(logits):
+def reference_score_binary_fixture(logits):
     torch = pytest.importorskip("torch")
     yes = torch.stack([logits[..., 0], logits[..., 2]], dim=-1).max(dim=-1).values
     no = torch.stack([logits[..., 1], logits[..., 3]], dim=-1).max(dim=-1).values
@@ -21,6 +21,6 @@ def old_score_binary_fixture(logits):
 def test_choiceset_matches_number_game_score_binary_fixture():
     torch = pytest.importorskip("torch")
     logits = torch.tensor([1.0, 3.0, 4.0, 2.0])
-    old = old_score_binary_fixture(logits)
+    reference = reference_score_binary_fixture(logits)
     new = ChoiceSet(BinaryTokenizer(), ["yes", "no"], variants=["raw", "with_space"]).from_logits(logits)
-    assert new.scores == {"yes": pytest.approx(float(old[0])), "no": pytest.approx(float(old[1]))}
+    assert new.scores == {"yes": pytest.approx(float(reference[0])), "no": pytest.approx(float(reference[1]))}
