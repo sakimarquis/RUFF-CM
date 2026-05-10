@@ -33,3 +33,37 @@ class Callback:
     def on_finish(self, state: MutableMapping[str, Any]) -> None:
         """Called after the enclosing run completes. Default: no-op."""
         return None
+
+
+class CallbackChain:
+    """Ordered runner over a fixed list of Callback instances.
+
+    augment() returns only non-empty contributions so callers can join with
+    a separator without producing blank lines. on_response and on_finish fan
+    out in declaration order; exceptions propagate.
+    """
+
+    def __init__(self, callbacks: Sequence[Callback]) -> None:
+        self._callbacks: tuple[Callback, ...] = tuple(callbacks)
+
+    def __iter__(self):
+        return iter(self._callbacks)
+
+    def __len__(self) -> int:
+        return len(self._callbacks)
+
+    def augment(self, state: MutableMapping[str, Any]) -> list[str]:
+        out = []
+        for cb in self._callbacks:
+            text = cb.augment(state)
+            if text:
+                out.append(text)
+        return out
+
+    def on_response(self, state: MutableMapping[str, Any], response: str) -> None:
+        for cb in self._callbacks:
+            cb.on_response(state, response)
+
+    def on_finish(self, state: MutableMapping[str, Any]) -> None:
+        for cb in self._callbacks:
+            cb.on_finish(state)
