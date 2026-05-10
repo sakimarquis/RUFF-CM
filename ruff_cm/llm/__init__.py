@@ -16,6 +16,7 @@ from .extract_answer.parsing import (
 from .extract_answer.terminal import TerminalFragment
 from .extract_hiddens.capture import CaptureMode, CaptureSpec, HiddenCapture
 from .extract_hiddens.locator import BoundaryPlan, find_subsequence, nonpad_last_positions, positions_from_spans, span_positions
+from .extract_hiddens.pooling import PoolMode, pool_for, pool_layered, pool_span, pool_spans
 from .families import ModelFamily, all_families, identify_family
 from .inference import BudgetSpec, InferenceResult, SamplingConfig, ScoringSpec, generate as runtime_generate
 from .inference.batch import JobManifest, RequestRecord, collect_ordered_results
@@ -92,6 +93,7 @@ __all__ = [
     "ModelFamily",
     "NormMatchedSteer",
     "OutputSpec",
+    "PoolMode",
     "RequestRecord",
     "SamplingConfig",
     "ScoringSpec",
@@ -148,6 +150,10 @@ __all__ = [
     "parse_json_with_repair",
     "patch",
     "positions_from_spans",
+    "pool_for",
+    "pool_layered",
+    "pool_span",
+    "pool_spans",
     "inference",
     "prompt",
     "register_hidden_hooks",

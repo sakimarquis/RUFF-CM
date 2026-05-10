@@ -34,13 +34,14 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
   `create_backend`, and `load_aliases`.
 - `ruff_cm.llm.families`: `ModelFamily`, `identify_family`, and the registry of model-level renderer, thinking,
   terminal-answer, role-marker, and loader-hint behavior used by backend compatibility predicates.
-- `ruff_cm.llm`: `ChoiceSet`, `CaptureMode`, `CaptureSpec`, `HiddenCapture`, `ThinkingConfig`, `TokenSpan`, and
-  `resolve_thinking`.
+- `ruff_cm.llm`: `ChoiceSet`, `CaptureMode`, `CaptureSpec`, `HiddenCapture`, `PoolMode`, `ThinkingConfig`,
+  `TokenSpan`, and `resolve_thinking`.
 - `ruff_cm.llm.inference`: composable `generate(...)` runtime specs, forward execution, KV-cache utilities,
   query-position logits, latent-thought generation, thinking-runtime helpers, batch request scaffolding, and
   generation retry/parse drivers.
 - `ruff_cm.llm.extract_hiddens`: hidden-capture types, read-only forward hooks, output-side probe positions,
-  hidden aggregation, and token-position helpers for converting semantic boundaries into capture/query positions.
+  hidden aggregation, span pooling, and token-position helpers for converting semantic boundaries into
+  capture/query positions.
 - `ruff_cm.llm.prompt`: `Message`, prompt composition helpers, chat-template introspection, and loss-mask
   tokenization helpers for chat-template-aware token span resolution.
 - `ruff_cm.llm.trajectory`: `Trajectory`, `Segment`, `TokenSpan`, and selector helpers for role, thinking,
@@ -54,6 +55,26 @@ Use `.[llm]` for OpenAI-compatible API and Hugging Face backend support. Use `.[
 - `ruff_cm.llm.hooks_runtime`: forward-hook hidden capture, layerwise position extraction, write-hook mutation, and subspace subtraction helpers.
 - `ChoiceSet` scores single-token candidates from full logits (`exact`) or API top-logprobs (`partial`).
 - `CaptureSpec` and `HiddenCapture` capture decoder-layer hidden states for prefill and teacher-forced positions.
+
+### Hidden Pooling
+
+`ruff_cm.llm.pool_span` reduces a hidden-state tensor over a `TokenSpan`:
+
+```python
+from ruff_cm.llm import pool_for, pool_layered, pool_span, pool_spans
+from ruff_cm.llm.trajectory import Trajectory
+
+traj = Trajectory.from_generated(messages, generated, tokenizer)
+# hidden: [seq_len, hidden_dim] for one layer; leading batch dims are preserved.
+
+assistant_vec = pool_for(traj, hidden, "assistant", "mean")
+per_step = pool_spans(hidden, list(traj.visible_steps), "mean")
+layered = pool_layered(captured_layers, traj.terminal_answer, "last")
+```
+
+`pool_span(mode="mean")` accumulates in fp32 and casts back to the input dtype, so bf16/fp16 inputs keep their
+storage dtype. `mode="last"` returns `hidden[..., end-1, :]`; the caller decides whether the span excludes EOS or
+`</think>`.
 
 ```python
 from ruff_cm.llm.backends import Message, create_backend
